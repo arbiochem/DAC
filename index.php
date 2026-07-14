@@ -3063,8 +3063,8 @@ body.sidebar-hidden .main {
         <div class="cfg-tab active" data-cfg="societes" style="padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;color:var(--accent);border-bottom:2px solid var(--accent);margin-bottom:-2px;transition:all .15s;">🏢 Sociétés</div>
         <div class="cfg-tab" data-cfg="auditeurs" style="padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">👤 Auditeurs</div>
         <div class="cfg-tab" data-cfg="responsables" style="padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">👤 Responsables</div>
-        <div class="cfg-tab" data-cfg="eisenhower" style="padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">🎯 Matrice Eisenhower</div>
-        <div class="cfg-tab" data-cfg="database" style="padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;">🗄️ Base de données</div>
+        <div class="cfg-tab" data-cfg="eisenhower" style="padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s; display:none">🎯 Matrice Eisenhower</div>
+        <div class="cfg-tab" data-cfg="database" style="padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s; display:none">🗄️ Base de données</div>
       </div>
 
       <div id="cfg-societes">
@@ -6264,141 +6264,192 @@ window.auditGoToActions = auditGoToActions;
 window.auditGoToRapport = auditGoToRapport;
 
 function renderAudits(f){
-  aflt=f||aflt;
-  let rows=AUDITS;
-  if(aflt!=='all') rows=rows.filter(a=>a.status===aflt);
+    $.ajax({
+      url: "/DAC/php/plan/actions.php",
+      type: "POST",
+      dataType: "json",
+      data: {
+          action: "lister"
+      },
 
-  // Total count
-  $('#audits-count').text(rows.length+' result(s)');
+      success: function(response) {
+          if (response.success) {
+              console.log(response.data);
 
-  // Split by category (default = plan_audit for legacy entries)
-  const catPlan     = rows.filter(a=>(a.missionCategory||'plan_audit')==='plan_audit');
-  const catSpecial  = rows.filter(a=>a.missionCategory==='mission_speciale');
-  const catControle = rows.filter(a=>a.missionCategory==='mission_controle');
+              // ══════════════════════════════════════════════════════════
+              // NORMALISATION : schéma DB brut → schéma attendu par l'app
+              // (start/end/status/risk/difficulte/societe/title/type/progress)
+              // ══════════════════════════════════════════════════════════
+              const STATUT_MAP = {
+                planifie: 'planned',
+                en_cours: 'inprogress',
+                termine:  'completed',
+                retard:   'overdue'
+              };
 
-  $('#audits-count-plan').text(catPlan.length ? catPlan.length+' entrée'+(catPlan.length>1?'s':'') : '');
-  $('#audits-count-special').text(catSpecial.length ? catSpecial.length+' entrée'+(catSpecial.length>1?'s':'') : '');
-  $('#audits-count-controle').text(catControle.length ? catControle.length+' entrée'+(catControle.length>1?'s':'') : '');
+              AUDITS = response.data.map(function(a){
+                const rawStatut = a.fstatut || a.fstatut || 'planned';
+                return Object.assign({}, a, {
+                  start:      a.start      || a.date_debut       || '',
+                  end:        a.end        || a.date_fin          || '',
+                  status:     STATUT_MAP[rawStatut] || rawStatut,
+                  risk:       a.risk       || a.risque            || 'medium',
+                  difficulte: a.difficulte || a.fdifficulte        || 'moyenne',
+                  societe:    a.societe    || a.societe_auditee    || '',
+                  title:      a.title      || a.intitule           || '',
+                  type:       a.type       || a.ftype              || '',
+                  progress:   (a.progress !== undefined && a.progress !== null && a.progress !== '')
+                                ? +a.progress : 0
+                });
+              });
 
-  function _renderSection(rows, tbodyId, emptyId){
-    const $tb=$('#'+tbodyId).empty();
-    if(!rows.length){$('#'+emptyId).show();return;}
-    $('#'+emptyId).hide();
-    rows.forEach((a)=>{
-    const realIdx=AUDITS.indexOf(a);
-    const pc=a.progress>=80?'var(--green)':a.progress>=40?'var(--accent)':'var(--yellow)';
-    const socObj=(()=>{try{return SOCIETES.find(s=>s.nom===a.societe);}catch(e){return null;}})();
-    const logoUrl=socObj?getSocLogo(socKey(socObj)):null;
-    const socCell=logoUrl
-      ? `<div style="display:flex;align-items:center;gap:6px;">
-           <img src="${logoUrl}" style="width:20px;height:20px;object-fit:contain;border-radius:3px;border:1px solid var(--border);flex-shrink:0;" alt="">
-           <span style="color:var(--text-muted)">${a.societe}</span>
-         </div>`
-      : `<span style="color:var(--text-muted)">${a.societe}</span>`;
-    const linkedBadge = auditDossierBadgesHtml(a, realIdx);
+              aflt = f || aflt;
+              let rows = AUDITS;
+              if(aflt !== 'all') rows = rows.filter(a => a.status === aflt);
 
-    // ── Durée en jours ouvrés ──────────────────────────────────
-    const dureeJO = (()=>{
-      if(!a.start || !a.end) return null;
-      const d1 = new Date(a.start), d2 = new Date(a.end);
-      if(isNaN(d1)||isNaN(d2)||d2 < d1) return null;
-      let count = 0, cur = new Date(d1);
-      while(cur <= d2){ const dw = cur.getDay(); if(dw!==0&&dw!==6) count++; cur.setDate(cur.getDate()+1); }
-      return count;
-    })();
-    const dureeCell = dureeJO === null
-      ? `<span style="color:var(--text-dim);font-size:11px;">—</span>`
-      : (()=>{
-          const color = dureeJO <= 5  ? 'var(--green)'
-                      : dureeJO <= 20 ? 'var(--accent)'
-                      : dureeJO <= 60 ? 'var(--yellow)'
-                      :                 'var(--orange)';
-          const bg    = dureeJO <= 5  ? 'var(--green-bg)'
-                      : dureeJO <= 20 ? 'var(--accent-bg)'
-                      : dureeJO <= 60 ? 'var(--yellow-bg)'
-                      :                 'var(--orange-bg)';
-          return `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:${bg};color:${color};white-space:nowrap;font-family:var(--mono);">📅 ${dureeJO}j</span>`;
-        })();
+              // Total count
+              $('#audits-count').text(rows.length + ' result(s)');
 
-    const hasTDR = a.contexte||a.objGeneral||a.objSpecifiques||a.services||a.perimetreFonc;
-    const tdrRowId = `tdr-row-${realIdx}`;
-    $tb.append(`<tr class="audit-main-row" data-idx="${realIdx}">
-      <td><input type="checkbox" class="rchk"></td>
-      <td><span style="font-family:var(--mono);font-size:11px;color:var(--accent)">${a.ref}</span></td>
-      <td style="font-weight:500;max-width:200px;"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${a.title}">${a.title}</div>${a.objectifs?`<div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${a.objectifs}">${a.objectifs}</div>`:''}${linkedBadge}
-      </td>
-      <td>${socCell}</td>
-      <td style="font-size:11px;color:var(--text-muted)">${a.type||'—'}${a.cycle?`<div style="font-size:10px;color:var(--accent);margin-top:2px;font-weight:500;">↳ ${a.cycle==='Autre (préciser)'&&a.cycle_custom ? a.cycle_custom : a.cycle}</div>`:''}${(a.cycles_multi&&a.cycles_multi.length)?`<div style="font-size:9px;color:var(--purple);margin-top:2px;" title="Cycles additionnels : ${a.cycles_multi.join(', ')}">+${a.cycles_multi.length} cycle(s)</div>`:''}</td>
-      <td><span class="badge ${a.risk||'medium'}">${svLabel[a.risk]||a.risk||'—'}</span></td>
-      <td>${(()=>{const dc={facile:{c:'#15803d',bg:'#dcfce7',lbl:'✅ Facile'},moyenne:{c:'#b45309',bg:'#fef3c7',lbl:'🟡 Moyenne'},difficile:{c:'#c2410c',bg:'#ffedd5',lbl:'🔴 Difficile'},'très difficile':{c:'#7f1d1d',bg:'#fee2e2',lbl:'💀 Très difficile'}};const cfg=dc[a.difficulte||'moyenne']||dc['moyenne'];return `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${cfg.bg};color:${cfg.c};white-space:nowrap;">${cfg.lbl}</span>`;})()}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${a.start||'—'}</td>
-      <td style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${a.end||'—'}</td>
-      <td class="t-center">${dureeCell}</td>
-      <td><span class="badge ${a.status}">${AUDIT_STATUS_LABELS[a.status]||a.status}</span></td>
-      <td style="min-width:110px;"><div style="display:flex;align-items:center;gap:5px;">
-        <div class="pbar" style="flex:1"></div>
-        <span style="font-size:11px;color:var(--text-muted);width:28px;font-family:var(--mono)">${a.progress}%</span>
-      </div></td>
-      <td>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;">
-          <button class="btn audit-edit-btn" data-idx="${realIdx}" style="padding:2px 8px;font-size:11px;" title="Modifier">✏️</button>
-          <button class="btn audit-quick-btn" data-idx="${realIdx}" style="padding:2px 8px;font-size:11px;" title="Ajustement rapide">⚡</button>
-          <button class="btn audit-tdr-toggle-btn" data-idx="${realIdx}" data-tdr-target="${tdrRowId}" style="padding:2px 8px;font-size:11px;${hasTDR?'color:var(--accent);border-color:var(--accent);':'color:var(--text-dim);'}" title="${hasTDR?'Voir Contexte / Objectifs / Périmètre':'Aucune donnée TDR renseignée'}">📋</button>
-        </div>
-      </td>
-    </tr>
-    <tr id="${tdrRowId}" class="audit-tdr-expand-row" style="display:none;">
-      <td colspan="13" style="padding:0;border-bottom:2px solid var(--accent);background:var(--accent-bg);">
-        <div style="padding:14px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
-          <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px 13px;">
-            <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:5px;">1. Contexte et Justification</div>
-            ${(()=>{
-              const psr=a.periodeRevue;
-              const mm=['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-              const psrStr=(psr&&(psr.debMois||psr.debAnnee||psr.finMois||psr.finAnnee))
-                ? `<div style="display:inline-flex;align-items:center;gap:5px;padding:2px 9px;background:var(--accent-bg);border:1px solid rgba(0,112,242,.2);border-radius:10px;font-size:10.5px;font-weight:700;color:var(--accent);margin-bottom:8px;">📅 Période sous revue : ${psr.debMois?mm[parseInt(psr.debMois,10)]:''} ${psr.debAnnee||''} → ${psr.finMois?mm[parseInt(psr.finMois,10)]:''} ${psr.finAnnee||''}</div>`
-                : '';
-              return psrStr;
-            })()}
-            <div style="font-size:11.5px;color:var(--text);line-height:1.55;white-space:pre-wrap;">${(a.contexte||'<span style="color:var(--text-dim);font-style:italic;">Non renseigné</span>')}</div>
-          </div>
-          <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px 13px;">
-            <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:5px;">2. Objectifs de la Mission</div>
-            ${a.objGeneral?`<div style="font-size:9.5px;font-weight:700;color:var(--text-muted);margin-bottom:3px;">Objectif général</div><div style="font-size:11.5px;color:var(--text);line-height:1.55;margin-bottom:8px;">${a.objGeneral}</div>`:''}
-            ${a.objSpecifiques?`<div style="font-size:9.5px;font-weight:700;color:var(--text-muted);margin-bottom:3px;">Objectifs spécifiques</div><div style="font-size:11.5px;color:var(--text);line-height:1.55;white-space:pre-wrap;">${a.objSpecifiques}</div>`:''}
-            ${!a.objGeneral&&!a.objSpecifiques?`<span style="color:var(--text-dim);font-style:italic;font-size:11.5px;">Non renseigné</span>`:''}
-          </div>
-          <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px 13px;">
-            <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:5px;">3. Périmètre de la Mission</div>
-            ${a.services?`<div style="font-size:9.5px;font-weight:700;color:var(--text-muted);margin-bottom:3px;">Direction et Service Concernés</div><div style="font-size:11.5px;color:var(--text);margin-bottom:8px;">${a.services}</div>`:''}
-            ${!a.services?`<span style="color:var(--text-dim);font-style:italic;font-size:11.5px;">Non renseigné</span>`:''}
-          </div>
-        </div>
-      </td>
-    </tr>`);
+              // Split by category (default = plan_audit for legacy entries)
+              const catPlan     = rows.filter(a => (a.missionCategory || 'plan_audit') === 'plan_audit');
+              const catSpecial  = rows.filter(a => a.missionCategory === 'mission_speciale');
+              const catControle = rows.filter(a => a.missionCategory === 'mission_controle');
+
+              $('#audits-count-plan').text(catPlan.length ? catPlan.length + ' entrée' + (catPlan.length > 1 ? 's' : '') : '');
+              $('#audits-count-special').text(catSpecial.length ? catSpecial.length + ' entrée' + (catSpecial.length > 1 ? 's' : '') : '');
+              $('#audits-count-controle').text(catControle.length ? catControle.length + ' entrée' + (catControle.length > 1 ? 's' : '') : '');
+
+              function _renderSection(rows, tbodyId, emptyId){
+                const $tb = $('#' + tbodyId).empty();
+                if(!rows.length){ $('#' + emptyId).show(); return; }
+                $('#' + emptyId).hide();
+                rows.forEach((a) => {
+                  const realIdx = AUDITS.indexOf(a);
+                  const pc = a.progress >= 80 ? 'var(--green)' : a.progress >= 40 ? 'var(--accent)' : 'var(--yellow)';
+                  const socObj = (() => { try { return SOCIETES.find(s => s.nom === a.societe); } catch(e){ return null; } })();
+                  const logoUrl = socObj ? getSocLogo(socKey(socObj)) : null;
+                  const socCell = logoUrl
+                    ? `<div style="display:flex;align-items:center;gap:6px;">
+                        <img src="${logoUrl}" style="width:20px;height:20px;object-fit:contain;border-radius:3px;border:1px solid var(--border);flex-shrink:0;" alt="">
+                        <span style="color:var(--text-muted)">${a.societe}</span>
+                      </div>`
+                    : `<span style="color:var(--text-muted)">${a.societe}</span>`;
+                  const linkedBadge = auditDossierBadgesHtml(a, realIdx);
+
+                  // ── Durée en jours ouvrés ──────────────────────────────────
+                  const dureeJO = (() => {
+                    if(!a.start || !a.end) return null;
+                    const d1 = new Date(a.start), d2 = new Date(a.end);
+                    if(isNaN(d1) || isNaN(d2) || d2 < d1) return null;
+                    let count = 0, cur = new Date(d1);
+                    while(cur <= d2){ const dw = cur.getDay(); if(dw !== 0 && dw !== 6) count++; cur.setDate(cur.getDate() + 1); }
+                    return count;
+                  })();
+                  const dureeCell = dureeJO === null
+                    ? `<span style="color:var(--text-dim);font-size:11px;">—</span>`
+                    : (() => {
+                        const color = dureeJO <= 5  ? 'var(--green)'
+                                    : dureeJO <= 20 ? 'var(--accent)'
+                                    : dureeJO <= 60 ? 'var(--yellow)'
+                                    :                 'var(--orange)';
+                        const bg    = dureeJO <= 5  ? 'var(--green-bg)'
+                                    : dureeJO <= 20 ? 'var(--accent-bg)'
+                                    : dureeJO <= 60 ? 'var(--yellow-bg)'
+                                    :                 'var(--orange-bg)';
+                        return `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:${bg};color:${color};white-space:nowrap;font-family:var(--mono);">📅 ${dureeJO}j</span>`;
+                      })();
+
+                  const hasTDR = a.contexte || a.obj_general || a.obj_specifiques || a.services || a.perimetreFonc;
+                  const tdrRowId = `tdr-row-${realIdx}`;
+                  $tb.append(`<tr class="audit-main-row" data-idx="${realIdx}">
+                    <td><input type="checkbox" class="rchk"></td>
+                    <td><span style="font-family:var(--mono);font-size:11px;color:var(--accent)">${a.ref}</span></td>
+                    <td style="font-weight:500;max-width:200px;"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${a.title}">${a.title}</div>${a.objectifs ? `<div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${a.objectifs}">${a.objectifs}</div>` : ''}${linkedBadge}
+                    </td>
+                    <td>${socCell}</td>
+                    <td style="font-size:11px;color:var(--text-muted)">${a.type || '—'}${a.cycle ? `<div style="font-size:10px;color:var(--accent);margin-top:2px;font-weight:500;">↳ ${a.cycle === 'Autre (préciser)' && a.cycle_custom ? a.cycle_custom : a.cycle}</div>` : ''}${(a.cycles_multi && a.cycles_multi.length) ? `<div style="font-size:9px;color:var(--purple);margin-top:2px;" title="Cycles additionnels : ${a.cycles_multi.join(', ')}">+${a.cycles_multi.length} cycle(s)</div>` : ''}</td>
+                    <td><span class="badge ${a.risque || 'medium'}">${svLabel[a.risque] || a.risque || '—'}</span></td>
+                    <td>${(() => { const dc = {facile:{c:'#15803d',bg:'#dcfce7',lbl:'✅ Facile'},moyenne:{c:'#b45309',bg:'#fef3c7',lbl:'🟡 Moyenne'},difficile:{c:'#c2410c',bg:'#ffedd5',lbl:'🔴 Difficile'},'très difficile':{c:'#7f1d1d',bg:'#fee2e2',lbl:'💀 Très difficile'}}; const cfg = dc[a.difficulte || 'moyenne'] || dc['moyenne']; return `<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${cfg.bg};color:${cfg.c};white-space:nowrap;">${cfg.lbl}</span>`; })()}</td>
+                    <td style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${a.start || '—'}</td>
+                    <td style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${a.end || '—'}</td>
+                    <td class="t-center">${dureeCell}</td>
+                    <td><span class="badge ${a.fstatut}">${AUDIT_STATUS_LABELS[a.fstatut] || a.fstatut}</span></td>
+                    <td style="min-width:110px;"><div style="display:flex;align-items:center;gap:5px;">
+                      <div class="pbar" style="flex:1"></div>
+                      <span style="font-size:11px;color:var(--text-muted);width:28px;font-family:var(--mono)">${a.progress}%</span>
+                    </div></td>
+                    <td>
+                      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                        <button class="btn audit-edit-btn" data-idx="${realIdx}" style="padding:2px 8px;font-size:11px;" title="Modifier">✏️</button>
+                        <button class="btn audit-quick-btn" data-idx="${realIdx}" style="padding:2px 8px;font-size:11px;" title="Ajustement rapide">⚡</button>
+                        <button class="btn audit-tdr-toggle-btn" data-idx="${realIdx}" data-tdr-target="${tdrRowId}" style="padding:2px 8px;font-size:11px;${hasTDR ? 'color:var(--accent);border-color:var(--accent);' : 'color:var(--text-dim);'}" title="${hasTDR ? 'Voir Contexte / Objectifs / Périmètre' : 'Aucune donnée TDR renseignée'}">📋</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr id="${tdrRowId}" class="audit-tdr-expand-row" style="display:none;">
+                    <td colspan="13" style="padding:0;border-bottom:2px solid var(--accent);background:var(--accent-bg);">
+                      <div style="padding:14px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+                        <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px 13px;">
+                          <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:5px;">1. Contexte et Justification</div>
+                          ${(() => {
+                            //const psr = a.periodeRevue;
+                            const mm = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+                            const psrStr = ((a.debmois || a.debans || a.finmois || a.finans))
+                              ? `<div style="display:inline-flex;align-items:center;gap:5px;padding:2px 9px;background:var(--accent-bg);border:1px solid rgba(0,112,242,.2);border-radius:10px;font-size:10.5px;font-weight:700;color:var(--accent);margin-bottom:8px;">📅 Période sous revue : ${a.debmois ? mm[parseInt(a.debmois, 10)] : ''} ${a.debans || ''} → ${a.finmois ? mm[parseInt(a.finmois, 10)] : ''} ${a.finans || ''}</div>`
+                              : '';
+                            return psrStr;
+                          })()}
+                          <div style="font-size:11.5px;color:var(--text);line-height:1.55;white-space:pre-wrap;">${(a.contexte || '<span style="color:var(--text-dim);font-style:italic;">Non renseigné</span>')}</div>
+                        </div>
+                        <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px 13px;">
+                          <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:5px;">2. Objectifs de la Mission</div>
+                          ${a.obj_general ? `<div style="font-size:9.5px;font-weight:700;color:var(--text-muted);margin-bottom:3px;">Objectif général</div><div style="font-size:11.5px;color:var(--text);line-height:1.55;margin-bottom:8px;">${a.obj_general}</div>` : ''}
+                          ${a.obj_specifiques ? `<div style="font-size:9.5px;font-weight:700;color:var(--text-muted);margin-bottom:3px;">Objectifs spécifiques</div><div style="font-size:11.5px;color:var(--text);line-height:1.55;white-space:pre-wrap;">${a.obj_specifiques}</div>` : ''}
+                          ${!a.obj_general && !a.obj_specifiques ? `<span style="color:var(--text-dim);font-style:italic;font-size:11.5px;">Non renseigné</span>` : ''}
+                        </div>
+                        <div style="background:#fff;border:1px solid var(--border);border-radius:6px;padding:10px 13px;">
+                          <div style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:5px;">3. Périmètre de la Mission</div>
+                          ${a.services ? `<div style="font-size:9.5px;font-weight:700;color:var(--text-muted);margin-bottom:3px;">Direction et Service Concernés</div><div style="font-size:11.5px;color:var(--text);margin-bottom:8px;">${a.services}</div>` : ''}
+                          ${!a.services ? `<span style="color:var(--text-dim);font-style:italic;font-size:11.5px;">Non renseigné</span>` : ''}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>`);
+                });
+              }
+
+              _renderSection(catPlan,     'audits-tbody-plan',     'audits-empty-plan');
+              _renderSection(catSpecial,  'audits-tbody-special',  'audits-empty-special');
+              _renderSection(catControle, 'audits-tbody-controle', 'audits-empty-controle');
+              
+
+              // Mettre à jour les barres de progression
+              $('.pbar').each(function(){
+                const $row = $(this).closest('tr');
+                const idx = $row.data('idx');
+                if(idx === undefined) return;
+                const a = AUDITS[idx]; if(!a) return;
+
+                const pc = a.progress >= 80 ? 'var(--green)' : a.progress >= 40 ? 'var(--accent)' : 'var(--yellow)';
+                $(this).html(`<div class="pfill" style="width:${a.progress}%;background:${pc};"></div>`);
+              });
+
+          } else {
+              console.log(response.message);
+          }
+      },
+
+      error: function(xhr) {
+          console.log("Erreur AJAX :", xhr.responseText);
+      }
     });
   }
-
-  _renderSection(catPlan,     'audits-tbody-plan',     'audits-empty-plan');
-  _renderSection(catSpecial,  'audits-tbody-special',  'audits-empty-special');
-  _renderSection(catControle, 'audits-tbody-controle', 'audits-empty-controle');
-
-  // Mettre à jour les barres de progression
-  $('.pbar').each(function(){
-    const $row=$(this).closest('tr');
-    const idx=$row.data('idx');
-    if(idx===undefined) return;
-    const a=AUDITS[idx]; if(!a) return;
-    const pc=a.progress>=80?'var(--green)':a.progress>=40?'var(--accent)':'var(--yellow)';
-    $(this).html(`<div class="pfill" style="width:${a.progress}%;background:${pc};"></div>`);
-  });
-}
 
 $(document).on('click','.audit-tdr-toggle-btn',function(e){
   e.stopPropagation();
   const targetId=$(this).data('tdr-target');
   const $row=$('#'+targetId);
-  const isVisible=_elVisible($row.e[0]);
+  const isVisible=_elVisible($row[0]);
   // Fermer tous les autres
   $('.audit-tdr-expand-row').hide();
   $('.audit-tdr-toggle-btn').css({'background':'','font-weight':''}).text('📋');
@@ -6476,7 +6527,7 @@ $(document).on('click','.audit-quick-btn',function(){
   openModal(`⚡ Ajustement rapide — ${a.ref}`,`
     <div style="background:var(--surface2);border-radius:5px;padding:10px 12px;margin-bottom:12px;font-size:12px;">
       <strong>${a.title}</strong><br>
-      <span style="color:var(--text-muted);font-size:11px;">${a.societe} · ${a.auditor}</span>
+      <span style="color:var(--text-muted);font-size:11px;">${a.societe_auditee} · ${a.auditor}</span>
     </div>
     <div class="frow2"><div class="flbl2">Statut</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;" id="aq-status-btns">
@@ -7192,7 +7243,7 @@ $(document).on('click','.action-constat-del-btn',function(){
    RCM_CYCLES — source unique partagée entre Nouvel Audit et RCM
    ══════════════════════════════════════════════════════════ */
 function AFORM(a){
-    const isEdit=!!a;
+  const isEdit=!!a;
   const today=new Date().toISOString().slice(0,10);
   const yy=String(new Date().getFullYear()).slice(-2);
   // Calcul du prochain numéro de dossier par catégorie (format ARB-XX-[Filiale]-[NN]-[yy])
@@ -7212,7 +7263,7 @@ function AFORM(a){
   const defaultRef=isEdit?a.ref||'':( prefixMap[defaultCat]+'[Filiale]-'+_nextNum(defaultCat)+'-'+yy );
 
   // Période sous revue : décomposer si déjà renseignée (format "MM/AAAA")
-  const psr = isEdit&&a.periodeRevue ? a.periodeRevue : {debMois:'',debAnnee:'',finMois:'',finAnnee:''};
+  const psr = isEdit&&a.periodeRevue ? a.periodeRevue : {debmois:'',debans:'',finmois:'',finans:''};
   const _mm = ['01','02','03','04','05','06','07','08','09','10','11','12'];
   const _mmlbl = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const _mmOpts = (sel)=>_mm.map((m,i)=>`<option value="${m}"${sel===m?' selected':''}>${_mmlbl[i]}</option>`).join('');
@@ -7232,7 +7283,7 @@ function AFORM(a){
 
   <div class="frow2">
     <div class="flbl2">Plan d'Audit — Réf.</div>
-    <input class="finp" id="f-plan-ref" placeholder="Ex: PA-2026-01" value="${isEdit?a.planRef||'':''}">
+    <input class="finp" id="f-plan-ref" placeholder="Ex: PA-2026-01" value="${isEdit?a.ref||'':''}">
   </div>
 
   <div style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:10px 12px;margin-bottom:13px;">
@@ -7243,9 +7294,9 @@ function AFORM(a){
   <div style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:10px 12px;margin-bottom:13px;">
     <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">2. Objectifs de la Mission</div>
     <div class="flbl2" style="margin-bottom:4px;">Objectif général</div>
-    <textarea class="finp" id="f-obj-general" rows="2" style="resize:vertical;height:54px;margin-bottom:8px;" placeholder="Objectif général de la mission…">${isEdit?a.objGeneral||'':''}</textarea>
+    <textarea class="finp" id="f-obj-general" rows="2" style="resize:vertical;height:54px;margin-bottom:8px;" placeholder="Objectif général de la mission…">${isEdit?a.obj_general||'':''}</textarea>
     <div class="flbl2" style="margin-bottom:4px;">Objectifs spécifiques</div>
-    <textarea class="finp" id="f-obj-specifiques" rows="3" style="resize:vertical;height:72px;" placeholder="- Objectif 1&#10;- Objectif 2&#10;- Objectif 3">${isEdit?a.objSpecifiques||'':''}</textarea>
+    <textarea class="finp" id="f-obj-specifiques" rows="3" style="resize:vertical;height:72px;" placeholder="- Objectif 1&#10;- Objectif 2&#10;- Objectif 3">${isEdit?a.obj_specifiques||'':''}</textarea>
   </div>
 
   <div style="background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:10px 12px;margin-bottom:13px;">
@@ -7290,7 +7341,7 @@ function AFORM(a){
        ══════════════════════════════════════ -->
   <div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:12px;">
     <div class="flbl2" style="margin-bottom:4px;">✅ Points Forts Constatés <span style="font-size:9px;color:var(--text-muted);font-weight:400;">(une ligne par point : Processus | Point Fort | Impact)</span></div>
-    <textarea class="finp" id="f-points-forts" rows="4" style="resize:vertical;height:90px;font-size:11.5px;font-family:var(--mono);" placeholder="Gestion des Achats | Numérisation à 100% des validations | Réduction des délais de 5 jours&#10;Ressources Humaines | Onboarding automatisé | Conformité des dossiers&#10;Sécurité Informatique | 98% au test phishing | Forte culture de vigilance">${isEdit?a.pointsForts||'':''}</textarea>
+    <textarea class="finp" id="f-points-forts" rows="4" style="resize:vertical;height:90px;font-size:11.5px;font-family:var(--mono);" placeholder="Gestion des Achats | Numérisation à 100% des validations | Réduction des délais de 5 jours&#10;Ressources Humaines | Onboarding automatisé | Conformité des dossiers&#10;Sécurité Informatique | 98% au test phishing | Forte culture de vigilance">${isEdit?a.fpointfort||'':''}</textarea>
   </div>
 
   <!-- ══════════════════════════════════════
@@ -7320,7 +7371,7 @@ function AFORM(a){
       </select></div>
     <div class="frow2"><div class="flbl2">Risque</div>
       <select class="finp" style="appearance:none;" id="f-risk">
-        ${['critical','high','medium','low'].map(r=>`<option value="${r}"${(isEdit?a.risk:'')=== r?' selected':(!isEdit&&r==='medium'?' selected':'')}>  ${r.charAt(0).toUpperCase()+r.slice(1)}</option>`).join('')}
+        ${['critical','high','medium','low'].map(r=>`<option value="${r}"${(isEdit?a.risque:'')=== r?' selected':(!isEdit&&r==='medium'?' selected':'')}>  ${r.charAt(0).toUpperCase()+r.slice(1)}</option>`).join('')}
       </select></div>
   </div>
   <div class="frow2">
@@ -7388,11 +7439,11 @@ function AFORM(a){
       ${Object.keys(RCM_CYCLES).map(c=>`<option value="${c}"${isEdit&&a.cycle===c?' selected':''}>${c}</option>`).join('')}
       <option value="Autre (préciser)"${isEdit&&a.cycle==='Autre (préciser)'?' selected':''}>Autre (préciser ci-dessous)</option>
     </select>
-    <input class="finp" id="f-cycle-custom" placeholder="Préciser si Autre…" value="${isEdit&&a.cycle_custom?a.cycle_custom:''}" style="margin-top:5px;display:${isEdit&&a.cycle==='Autre (préciser)'?'block':'none'};">
+    <input class="finp" id="f-cycle-custom" placeholder="Préciser si Autre…" value="${isEdit&&a.cycle_additionnel?a.cycle_additionnel:''}" style="margin-top:5px;display:${isEdit&&a.cycle==='Autre (préciser)'?'block':'none'};">
     <div style="margin-top:7px;">
       <div class="flbl2" style="margin-bottom:4px;">Cycles additionnels <span style="font-size:9px;color:var(--text-muted);font-weight:400;">(optionnel — choix multiple, en plus du cycle ci-dessus)</span></div>
       <div id="f-cycles-multi" style="display:flex;flex-wrap:wrap;gap:8px;border:1px solid var(--border);border-radius:6px;padding:8px 10px;background:var(--surface2);max-height:110px;overflow-y:auto;">
-        ${Object.keys(RCM_CYCLES).map(c=>`<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;"><input type="checkbox" class="f-cycle-multi-cb" value="${c}"${isEdit&&(a.cycles_multi||[]).indexOf(c)>=0?' checked':''} style="accent-color:var(--accent);"> ${c}</label>`).join('')}
+        ${Object.keys(RCM_CYCLES).map(c=>`<label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;"><input type="checkbox" class="f-cycle-multi-cb" value="${c}"${isEdit&&(a.cycle_additionnel||[]).indexOf(c)>=0?' checked':''} style="accent-color:var(--accent);"> ${c}</label>`).join('')}
       </div>
     </div>
   </div>
@@ -7624,6 +7675,7 @@ $('#msave').on('click',function(){
   }
 
   if(mode==='audit-edit'){
+    /*
     const idx=$('#mbk').data('auditEditIdx');
     if(idx===undefined||idx===null) return;
     const prevStatus=(AUDITS[idx]||{}).status;
@@ -7664,8 +7716,8 @@ $('#msave').on('click',function(){
       AUDITS[idx].statut_doc=$('#f-statut-doc').val()||AUDITS[idx].statut_doc||'Projet de rapport';
       AUDITS[idx].planRef=$('#f-plan-ref').val()||AUDITS[idx].planRef||'';
       AUDITS[idx].contexte=$('#f-contexte').val()||AUDITS[idx].contexte||'';
-      AUDITS[idx].objGeneral=$('#f-obj-general').val()||AUDITS[idx].objGeneral||'';
-      AUDITS[idx].objSpecifiques=$('#f-obj-specifiques').val()||AUDITS[idx].objSpecifiques||'';
+      AUDITS[idx].obj_general=$('#f-obj-general').val()||AUDITS[idx].obj_general||'';
+      AUDITS[idx].obj_specifiques=$('#f-obj-specifiques').val()||AUDITS[idx].obj_specifiques||'';
       AUDITS[idx].services=$('#f-services').val()||AUDITS[idx].services||'';
       AUDITS[idx].perimetreFonc=$('#f-perimetre-fonc').val()||AUDITS[idx].perimetreFonc||'';
       AUDITS[idx].pointsForts=$('#f-points-forts').val()||AUDITS[idx].pointsForts||'';
@@ -7687,11 +7739,125 @@ $('#msave').on('click',function(){
     closeModal();
     tryRender(()=>syncMissionsFromAudits(_a&&_a.ref));
     renderAudits(); renderWidgets();
-    if(isViewVisible('view-gantt')) tryRender(()=>renderGantt());
-    dbSave();
-    toast('success','✓',`Audit ${_a?_a.ref:''} mis à jour → Mission synchronisée`);
-    return;
-  }
+    if(isViewVisible('view-gantt')) tryRender(()=>renderGantt());*/
+    
+      const idx=$('#mbk').data('auditEditIdx');
+      if(idx===undefined||idx===null) return;
+      const prevStatus=(AUDITS[idx]||{}).status;
+      const quick=$('#mbk').data('auditQuick');
+      const ref= AUDITS[idx].ref;
+      if(quick){
+        const data_modifier_rapide = {
+          action:'modifier_rapide',
+          ref: ref,
+          progress: parseInt($('#aq-progress').val()),
+          fstatut: $('#aq-status').val()
+        };
+        
+        $.ajax({
+            url: "/DAC/php/plan/actions.php",
+            type: "POST",
+            data: data_modifier_rapide,
+            dataType: "json",
+
+            success: function(response){
+                //console.log(response);
+                toast('success','✓',`Audit ${ref} modifié → Mission modifiée au Planning`);
+            },
+
+            error:function(xhr,status,error){
+                console.log("Status :",status);
+                console.log("Erreur :",error);
+                console.log("Réponse :",xhr.responseText);
+
+                alert("Erreur serveur : "+xhr.status);
+            }
+        }); 
+
+        const _a=AUDITS[idx];
+        if(_a&&_a.fstatut==='open') tryRender(()=>injectDomV_IIA(_a.ref));
+        if(_a&&_a.fstatut==='open'&&prevStatus!=='open') tryRender(()=>linkRCMTAFToOpenedAudit(_a));
+        $('#mbk').removeData('auditEditIdx');
+        closeModal();
+        tryRender(()=>syncMissionsFromAudits(_a&&_a.ref));
+        renderAudits(); renderWidgets();
+        if(isViewVisible('view-gantt')) tryRender(()=>renderGantt());
+
+      } else if($('#f-title').length){
+        const ref=$('#f-ref').val().trim();
+        const _equipe=[...document.querySelectorAll('.f-equipe-cb:checked')].map(cb=>cb.value);
+        const _cycle=[...document.querySelectorAll('.f-cycle-multi-cb:checked')].map(cb=>cb.value);
+
+        let val_categorie = null;
+
+        if (ref.includes("PA")) {
+            val_categorie = "plan_audit";
+        } else if (ref.includes("MS")) {
+            val_categorie = "mission_speciale";
+        } else if (ref.includes("MC")) {
+            val_categorie = "mission_controle";
+        }
+
+
+        const data_modifier = {
+          action:'modifier',
+          ref: $('#f-ref').val().trim(),
+          societe: $('#f-societe').val().trim(),
+          title: $('#f-title').val().trim(),
+          debut: $('#f-start').val().trim(),
+          fin: $('#f-end').val().trim(),
+          contexte: $('#f-contexte').val().trim(),
+          obj_general: $('#f-obj-general').val().trim(),
+          obj_specifiques: $('#f-obj-specifiques').val().trim(),
+          services: $('#f-services').val().trim(),
+          actual_start: $('#f-actual-start').val().trim(),
+          actual_end: $('#f-actual-end').val().trim(),
+          lieu: $('#f-lieu').val().trim(),
+          debmois: $('#f-psr-deb-mois').val().trim(),
+          finmois: $('#f-psr-fin-mois').val().trim(),
+          debans: $('#f-psr-deb-an').val().trim(),
+          finans: $('#f-psr-fin-an').val().trim(),
+          fpointfort: $('#f-points-forts').val().trim(),
+          fstatut: $('#f-statut-doc').val().trim(),
+          fdifficulte: $('#f-difficulte').val().trim(),
+          cycle: $('#f-cycle').val().trim(),
+          progress: parseInt($('#f-progress').val()),
+          auditor: $('#f-auditor').val().trim(),
+          superviseur: $('#f-superviseur').val().trim(),
+          risque: $('#f-risk').val().trim(),
+          statut: $('#f-status').val().trim(),
+          ftype:$('#f-type').val().trim(),
+          equipe:_equipe,
+          cycle_additionnel:_cycle,
+          missionCategorie:val_categorie
+        };
+        
+        $.ajax({
+            url: "/DAC/php/plan/actions.php",
+            type: "POST",
+            data: data_modifier,
+            dataType: "json",
+
+            success: function(response){
+                console.log(response);
+                toast('success','✓',`Audit ${ref} modifié → Mission modifiée au Planning`);
+            },
+
+            error:function(xhr,status,error){
+                console.log("Status :",status);
+                console.log("Erreur :",error);
+                console.log("Réponse :",xhr.responseText);
+
+                alert("Erreur serveur : "+xhr.status);
+            }
+        }); 
+
+        if(isViewVisible('view-gantt')) tryRender(()=>renderGantt());
+        tryRender(()=>syncMissionsFromAudits());
+        renderAudits();renderWidgets();
+        closeModal();return;
+      }
+    }
 
   if(mode==='gantt-mission-save'){
     $(this).removeData('mode');
@@ -7810,9 +7976,84 @@ $('#msave').on('click',function(){
   }
 
   if(mode==='audit-new'){
-    const errs=[];
-    const $ref=$('#f-ref'), $title=$('#f-title'), $soc=$('#f-societe'), $start=$('#f-start'), $end=$('#f-end');
-    [$ref,$title,$soc,$start,$end].forEach($f=>$f.css('border-color',''));
+    const ref=$('#f-ref').val().trim();
+    const _equipe=[...document.querySelectorAll('.f-equipe-cb:checked')].map(cb=>cb.value);
+    const _cycle=[...document.querySelectorAll('.f-cycle-multi-cb:checked')].map(cb=>cb.value);
+
+    let val_categorie = null;
+
+    if (ref.includes("PA")) {
+        val_categorie = "plan_audit";
+    } else if (ref.includes("MS")) {
+        val_categorie = "mission_speciale";
+    } else if (ref.includes("MC")) {
+        val_categorie = "mission_controle";
+    }
+
+    const data = {
+      action:'ajouter',
+      ref: ref,
+      societe: $('#f-societe').val().trim(),
+      title: $('#f-title').val().trim(),
+      debut: $('#f-start').val().trim(),
+      fin: $('#f-end').val().trim(),
+      contexte: $('#f-contexte').val().trim(),
+      obj_general: $('#f-obj-general').val().trim(),
+      obj_specifiques: $('#f-obj-specifiques').val().trim(),
+      services: $('#f-services').val().trim(),
+      actual_start: $('#f-actual-start').val().trim(),
+      actual_end: $('#f-actual-end').val().trim(),
+      lieu: $('#f-lieu').val().trim(),
+      debmois: $('#f-psr-deb-mois').val().trim(),
+      finmois: $('#f-psr-fin-mois').val().trim(),
+      debans: $('#f-psr-deb-an').val().trim(),
+      finans: $('#f-psr-fin-an').val().trim(),
+      fpointfort: $('#f-points-forts').val().trim(),
+      fstatut: $('#f-statut-doc').val().trim(),
+      fdifficulte: $('#f-difficulte').val().trim(),
+      cycle: $('#f-cycle').val().trim(),
+      progress: parseInt($('#f-progress').val()),
+      auditor: $('#f-auditor').val().trim(),
+      superviseur: $('#f-superviseur').val().trim(),
+      risque: $('#f-risk').val().trim(),
+      statut: $('#f-status').val().trim(),
+      ftype:$('#f-type').val().trim(),
+      equipe:_equipe,
+      cycle_additionnel:_cycle,
+      missionCategorie:val_categorie
+    };
+
+    
+    $.ajax({
+        url: "/DAC/php/plan/actions.php",
+        type: "POST",
+        data: data,
+        dataType: "json",
+
+        success: function(response){
+            console.log(response);
+            toast('success','✓',`Audit ${ref} créé → Mission ajoutée au Planning`);
+            closeModal();return;
+            tryRender(()=>syncMissionsFromAudits());
+            renderAudits();renderWidgets();
+        },
+
+
+        error:function(xhr,status,error){
+
+            console.log("Status :",status);
+            console.log("Erreur :",error);
+            console.log("Réponse :",xhr.responseText);
+
+            alert("Erreur serveur : "+xhr.status);
+
+            $('#soc-save-btn').prop('disabled', false);
+        }
+    }); 
+
+    /*const errs=[];
+    //const $ref=$('#f-ref'), $title=$('#f-title'), $soc=$('#f-societe'), $start=$('#f-start'), $end=$('#f-end');
+    //[$ref,$title,$soc,$start,$end].forEach($f=>$f.css('border-color',''));
     if(!$ref.val().trim()){errs.push('Référence');$ref.css('border-color','var(--red)');}
     if(!$title.val().trim()){errs.push('Intitulé');$title.css('border-color','var(--red)');}
     if(!$soc.val()){errs.push('Société auditée');$soc.css('border-color','var(--red)');}
@@ -7821,7 +8062,7 @@ $('#msave').on('click',function(){
     if(errs.length){$('#aform-error').html('⚠ Champs obligatoires manquants : <strong>'+errs.join(', ')+'</strong>').show();return;}
     const ref=$ref.val().trim();
     const _equipe=[...document.querySelectorAll('.f-equipe-cb:checked')].map(cb=>cb.value);
-    AUDITS.push({ref,title:$title.val().trim(),societe:$soc.val(),auditor:$('#f-auditor').val()||'',superviseur:$('#f-superviseur').val()||'',equipe:_equipe,start:$start.val(),end:$end.val(),status:$('#f-status').val()||'planned',progress:parseInt($('#f-progress').val())||0,risk:$('#f-risk').val()||'medium',difficulte:$('#f-difficulte').val()||'moyenne',type:$('#f-type').val()||'',missionCategory:$('#f-mission-category').val()||'plan_audit',objectifs:$('#f-objectifs').val()||'',cycle:$('#f-cycle').val()||'',cycle_custom:$('#f-cycle-custom').val()||'',cycles_multi:[...document.querySelectorAll('.f-cycle-multi-cb:checked')].map(cb=>cb.value),actual_start:$('#f-actual-start').val()||'',actual_end:$('#f-actual-end').val()||'',lieu:$('#f-lieu').val()||'',statut_doc:$('#f-statut-doc').val()||'Projet de rapport',group:'Finance A',planRef:$('#f-plan-ref').val()||'',contexte:$('#f-contexte').val()||'',objGeneral:$('#f-obj-general').val()||'',objSpecifiques:$('#f-obj-specifiques').val()||'',services:$('#f-services').val()||'',perimetreFonc:$('#f-perimetre-fonc').val()||'',pointsForts:$('#f-points-forts').val()||'',periodeRevue:{debMois:$('#f-psr-deb-mois').val()||'',debAnnee:$('#f-psr-deb-an').val()||'',finMois:$('#f-psr-fin-mois').val()||'',finAnnee:$('#f-psr-fin-an').val()||'',dureeM:parseInt($('#f-psr-duree').val())||''}});
+    AUDITS.push({ref,title:$title.val().trim(),societe:$soc.val(),auditor:$('#f-auditor').val()||'',superviseur:$('#f-superviseur').val()||'',equipe:_equipe,start:$start.val(),end:$end.val(),status:$('#f-status').val()||'planned',progress:parseInt($('#f-progress').val())||0,risk:$('#f-risk').val()||'medium',difficulte:$('#f-difficulte').val()||'moyenne',type:$('#f-type').val()||'',missionCategory:$('#f-mission-category').val()||'plan_audit',objectifs:$('#f-objectifs').val()||'',cycle:$('#f-cycle').val()||'',cycle_custom:$('#f-cycle-custom').val()||'',cycles_multi:[...document.querySelectorAll('.f-cycle-multi-cb:checked')].map(cb=>cb.value),actual_start:$('#f-actual-start').val()||'',actual_end:$('#f-actual-end').val()||'',lieu:$('#f-lieu').val()||'',statut_doc:$('#f-statut-doc').val()||'Projet de rapport',group:'Finance A',planRef:$('#f-plan-ref').val()||'',contexte:$('#f-contexte').val()||'',obj_general:$('#f-obj-general').val()||'',obj_specifiques:$('#f-obj-specifiques').val()||'',services:$('#f-services').val()||'',perimetreFonc:$('#f-perimetre-fonc').val()||'',pointsForts:$('#f-points-forts').val()||'',periodeRevue:{debMois:$('#f-psr-deb-mois').val()||'',debAnnee:$('#f-psr-deb-an').val()||'',finMois:$('#f-psr-fin-mois').val()||'',finAnnee:$('#f-psr-fin-an').val()||'',dureeM:parseInt($('#f-psr-duree').val())||''}});
     $(this).removeData('mode');
     tryRender(()=>syncMissionsFromAudits());
     $('#nb-audits').text(AUDITS.length);
@@ -7829,7 +8070,7 @@ $('#msave').on('click',function(){
     if(isViewVisible('view-gantt')) tryRender(()=>renderGantt());
     dbSave();
     toast('success','✓',`Audit ${ref} créé → Mission ajoutée au Planning`);
-    closeModal();return;
+    closeModal();return;*/
   }
 });
 
@@ -7959,7 +8200,16 @@ let ganttFilterChef='';
 
 function dayW(){return ganttZoom==='day'?28:ganttZoom==='week'?20:8;}
 
-function parseD(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function parseD(s){
+  if(!s || typeof s !== 'string') return null;
+  const parts = s.split('-');
+  if(parts.length < 3) return null;
+  const y = +parts[0], m = +parts[1], d = +parts[2];
+  if(isNaN(y) || isNaN(m) || isNaN(d)) return null;
+  return new Date(y, m - 1, d);
+}
+
+
 function fmtD(d){return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'});}
 function fmtDShort(d){return String(d.getDate());}
 function diffDays(a,b){return Math.round((b-a)/(1000*60*60*24));}
@@ -7967,13 +8217,20 @@ function diffDays(a,b){return Math.round((b-a)/(1000*60*60*24));}
 function ganttBounds(){
   const today = new Date(); today.setHours(0,0,0,0);
   let mn=parseD('2025-01-01'), mx=parseD('2025-05-31');
+
   GANTT_MISSIONS.forEach(m=>{
     if(m.ref){
       const la=AUDITS.find(a=>a.ref===m.ref||(m.id==='M-'+a.ref));
       if(la&&(la.status==='planned'||la.status==='completed')) return;
     }
+
     const ms=parseD(m.start), me=parseD(m.end);
-    if(ms<mn)mn=ms; if(me>mx)mx=me;
+    if(!ms || !me || isNaN(ms) || isNaN(me)){
+      console.warn('ganttBounds: skipping mission with invalid dates', m);
+      return;
+    }
+    if(ms<mn)mn=ms;
+    if(me>mx)mx=me;
   });
 
   if(today<mn) mn=new Date(today);
@@ -9185,95 +9442,116 @@ function rcmEfficBadge(e){
 function renderRCM(){
   /* ── Populate filter dropdowns ── */
   /* Cycles : union des cycles officiels + cycles déjà en base */
-  const _officialCycles = Object.keys(RCM_CYCLES);
-  const _dbCycles = RCM_DATA.map(r=>r.cycle).filter(Boolean);
-  const cycles = [...new Set([..._officialCycles, ..._dbCycles])];
-  const filiales = [...new Set(RCM_DATA.map(r=>r.filiale).filter(Boolean))].sort();
-  const $cy=$('#rcm-f-cycle'), $fi=$('#rcm-f-filiale');
-  const prevCy=$cy.val(), prevFi=$fi.val();
-  $cy.html('<option value="">Tous les cycles</option>'+cycles.map(c=>`<option value="${c}">${c}</option>`).join(''));
-  $fi.html('<option value="">Toutes filiales</option>'+filiales.map(f=>`<option value="${f}">${f}</option>`).join(''));
-  if(prevCy) $cy.val(prevCy);
-  if(prevFi) $fi.val(prevFi);
+  $.ajax({
+      url: "/DAC/php/rcm/actions.php",
+      type: "POST",
+      dataType: "json",
+      data: {
+          action: "lister"
+      },
 
-  /* ── Filter ── */
-  const fCycle   = $('#rcm-f-cycle').val()||'';
-  const fFiliale = $('#rcm-f-filiale').val()||'';
-  const fLevel   = $('#rcm-f-level').val()||'';
-  const fSearch  = ($('#rcm-search').val()||'').toLowerCase();
+      success: function(response) {
+          if (response.success) {
+              console.log(response.data);
+              RCM_DATA=response.data;
+              const _officialCycles = Object.keys(RCM_CYCLES);
+              const _dbCycles = RCM_DATA.map(r=>r.cycle).filter(Boolean);
+              const cycles = [...new Set([..._officialCycles, ..._dbCycles])];
+              const filiales = [...new Set(RCM_DATA.map(r=>r.filiale).filter(Boolean))].sort();
+              const $cy=$('#rcm-f-cycle'), $fi=$('#rcm-f-filiale');
+              const prevCy=$cy.val(), prevFi=$fi.val();
+              $cy.html('<option value="">Tous les cycles</option>'+cycles.map(c=>`<option value="${c}">${c}</option>`).join(''));
+              $fi.html('<option value="">Toutes filiales</option>'+filiales.map(f=>`<option value="${f}">${f}</option>`).join(''));
+              if(prevCy) $cy.val(prevCy);
+              if(prevFi) $fi.val(prevFi);
 
-  let data = RCM_DATA.filter(r=>{
-    if(fFiliale && fFiliale!=='Toutes filiales' && r.filiale!==fFiliale && r.filiale!=='Toutes filiales') return false;
-    if(fCycle   && r.cycle!==fCycle)     return false;
-    if(fLevel){
-      const s=r.residuel||0;
-      if(fLevel==='high'   && s<10) return false;
-      if(fLevel==='medium' && (s<5||s>=10)) return false;
-      if(fLevel==='low'    && s>=5) return false;
-    }
-    if(fSearch){
-      const hay=(r.filiale+r.ref+r.cycle+r.processus+r.tache+r.risque+r.controle).toLowerCase();
-      if(!hay.includes(fSearch)) return false;
-    }
-    return true;
-  });
+              /* ── Filter ── */
+              const fCycle   = $('#rcm-f-cycle').val()||'';
+              const fFiliale = $('#rcm-f-filiale').val()||'';
+              const fLevel   = $('#rcm-f-level').val()||'';
+              const fSearch  = ($('#rcm-search').val()||'').toLowerCase();
 
-  /* ── KPI bar ── */
-  const total  = RCM_DATA.length;
-  const nHigh  = RCM_DATA.filter(r=>(r.residuel||0)>=10).length;
-  const nMed   = RCM_DATA.filter(r=>{const s=r.residuel||0;return s>=5&&s<10;}).length;
-  const nLow   = RCM_DATA.filter(r=>(r.residuel||0)<5&&r.residuel>0).length;
-  const nCtrl  = RCM_DATA.filter(r=>r.controle&&r.controle.trim()).length;
-  $('#rcm-kpi-bar').html([
-    {l:'Total entrées', v:total,  c:'var(--accent)',  bg:'var(--accent-bg)'},
-    {l:'Risque élevé',  v:nHigh,  c:'var(--red)',     bg:'var(--red-bg)'},
-    {l:'Risque moyen',  v:nMed,   c:'var(--yellow)',  bg:'var(--yellow-bg)'},
-    {l:'Risque faible', v:nLow,   c:'var(--green)',   bg:'var(--green-bg)'},
-    {l:'Avec contrôles',v:nCtrl,  c:'var(--purple)',  bg:'var(--purple-bg)'},
-  ].map(k=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow);">
-    <div style="width:32px;height:32px;border-radius:7px;background:${k.bg};display:grid;place-items:center;font-size:16px;font-weight:800;color:${k.c};font-family:var(--mono);flex-shrink:0;">${k.v}</div>
-    <div style="font-size:11px;color:var(--text-muted);">${k.l}</div>
-  </div>`).join(''));
+              let data = RCM_DATA.filter(r=>{
+                if(fFiliale && fFiliale!=='Toutes filiales' && r.filiale!==fFiliale && r.filiale!=='Toutes filiales') return false;
+                if(fCycle   && r.cycle!==fCycle)     return false;
+                if(fLevel){
+                  const s=r.residuel||0;
+                  if(fLevel==='high'   && s<10) return false;
+                  if(fLevel==='medium' && (s<5||s>=10)) return false;
+                  if(fLevel==='low'    && s>=5) return false;
+                }
+                if(fSearch){
+                  const hay=(r.filiale+r.ref+r.cycle+r.processus+r.tache+r.risque+r.controle).toLowerCase();
+                  if(!hay.includes(fSearch)) return false;
+                }
+                return true;
+              });
 
-  /* ── Badge nav ── */
-  $('#nb-rcm').text(total).toggle(total>0);
+              /* ── KPI bar ── */
+              const total  = RCM_DATA.length;
+              const nHigh  = RCM_DATA.filter(r=>(r.residuel||0)>=10).length;
+              const nMed   = RCM_DATA.filter(r=>{const s=r.residuel||0;return s>=5&&s<10;}).length;
+              const nLow   = RCM_DATA.filter(r=>(r.residuel||0)<5&&r.residuel>0).length;
+              const nCtrl  = RCM_DATA.filter(r=>r.controle&&r.controle.trim()).length;
+              $('#rcm-kpi-bar').html([
+                {l:'Total entrées', v:total,  c:'var(--accent)',  bg:'var(--accent-bg)'},
+                {l:'Risque élevé',  v:nHigh,  c:'var(--red)',     bg:'var(--red-bg)'},
+                {l:'Risque moyen',  v:nMed,   c:'var(--yellow)',  bg:'var(--yellow-bg)'},
+                {l:'Risque faible', v:nLow,   c:'var(--green)',   bg:'var(--green-bg)'},
+                {l:'Avec contrôles',v:nCtrl,  c:'var(--purple)',  bg:'var(--purple-bg)'},
+              ].map(k=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow);">
+                <div style="width:32px;height:32px;border-radius:7px;background:${k.bg};display:grid;place-items:center;font-size:16px;font-weight:800;color:${k.c};font-family:var(--mono);flex-shrink:0;">${k.v}</div>
+                <div style="font-size:11px;color:var(--text-muted);">${k.l}</div>
+              </div>`).join(''));
 
-  /* ── Table rows ── */
-  const tbody=$('#rcm-tbody');
-  if(data.length===0){
-    tbody.html('');
-    $('#rcm-empty').show();
-  } else {
-    $('#rcm-empty').hide();
-    tbody.html(data.map((r,i)=>`
-      <tr data-rcm-id="${r.id}">
-        <td><span style="font-size:11px;font-weight:600;">${r.filiale||'—'}</span>${(r.societes_multi&&r.societes_multi.length)?`<div style="margin-top:2px;" title="Sociétés additionnelles concernées">${r.societes_multi.map(s=>`<span style="font-size:8.5px;background:var(--purple-bg);color:var(--purple);padding:1px 5px;border-radius:3px;margin-right:2px;white-space:nowrap;">${s}</span>`).join('')}</div>`:''}</td>
-        <td><code style="font-size:11px;background:var(--surface2);padding:1px 5px;border-radius:3px;">${r.ref||'—'}</code>${(r.frap_refs&&r.frap_refs.length)?` <span style="font-size:9px;color:var(--red);background:var(--red-bg);padding:1px 5px;border-radius:3px;white-space:nowrap;" title="${r.frap_refs.length} constat(s) FRAP lié(s)">📋 ${r.frap_refs.length}</span>`:''}</td>
-        <td style="font-size:11px;">${r.cycle||'—'}</td>
-        <td style="font-size:11px;">${r.processus||'—'}</td>
-        <td style="font-size:11px;max-width:200px;white-space:normal;line-height:1.35;">${r.tache||'—'}</td>
-        <td style="font-size:10px;color:var(--text-muted);max-width:220px;white-space:normal;line-height:1.3;">${r.objectif||'—'}</td>
-        <td style="font-size:10px;max-width:220px;white-space:normal;line-height:1.3;color:var(--orange);">${r.risque||'—'}</td>
-        <td style="font-size:10px;color:var(--text-muted);max-width:180px;white-space:normal;line-height:1.3;">${r.desc_op||'—'}</td>
-        <td class="t-center">${r.imp_op?`<span style="font-weight:700;color:${r.imp_op>=4?'var(--red)':r.imp_op>=3?'var(--orange)':'var(--text)'};">${r.imp_op}</span>`:'<span style="color:var(--text-dim)">—</span>'}</td>
-        <td style="font-size:10px;color:var(--text-muted);max-width:180px;white-space:normal;line-height:1.3;">${r.desc_fin||'—'}</td>
-        <td class="t-center">${r.imp_fin?`<span style="font-weight:700;color:${r.imp_fin>=4?'var(--red)':r.imp_fin>=3?'var(--orange)':'var(--text)'};">${r.imp_fin}</span>`:'<span style="color:var(--text-dim)">—</span>'}</td>
-        <td style="font-size:10px;color:var(--text-muted);max-width:180px;white-space:normal;line-height:1.3;">${r.desc_rep||'—'}</td>
-        <td class="t-center">${r.imp_rep?`<span style="font-weight:700;color:${r.imp_rep>=4?'var(--red)':r.imp_rep>=3?'var(--orange)':'var(--text)'};">${r.imp_rep}</span>`:'<span style="color:var(--text-dim)">—</span>'}</td>
-        <td style="text-align:center;font-weight:700;">${r.impact||'—'}</td>
-        <td style="text-align:center;font-weight:700;">${r.likelihood||'—'}</td>
-        <td class="t-center">${rcmLevelBadge(r.inherent)}</td>
-        <td style="font-size:10px;max-width:220px;white-space:normal;line-height:1.35;color:var(--text-muted);">${(r.controle||'—').replace(/\n/g,'<br>')}</td>
-        <td class="t-center">${rcmEfficBadge(r.efficacite)}</td>
-        <td class="t-center">${rcmLevelBadge(r.residuel)}</td>
-        <td style="text-align:center;white-space:nowrap;">
-          <span style="cursor:pointer;color:var(--accent);font-size:12px;padding:2px 5px;" class="rcm-edit-btn" data-id="${r.id}" title="Modifier">✏️</span>
-          <span style="cursor:pointer;color:#0a7d4b;font-size:12px;padding:2px 5px;" class="rcm-exec-btn" data-id="${r.id}" title="Exécuter — créer un TAF lié à ce risque RCM">▶️</span>
-          <span style="cursor:pointer;color:var(--red);font-size:12px;padding:2px 5px;" class="rcm-del-btn" data-id="${r.id}" title="Supprimer">🗑️</span>
-        </td>
-      </tr>`).join(''));
-  }
+              /* ── Badge nav ── */
+              $('#nb-rcm').text(total).toggle(total>0);
 
+              /* ── Table rows ── */
+              const tbody=$('#rcm-tbody');
+              if(data.length===0){
+                tbody.html('');
+                $('#rcm-empty').show();
+              } else {
+                $('#rcm-empty').hide();
+                tbody.html(data.map((r,i)=>`
+                  <tr data-rcm-id="${r.id}">
+                    <td><span style="font-size:11px;font-weight:600;">${r.filiale||'—'}</span>${(r.societes_multi&&r.societes_multi.length)?`<div style="margin-top:2px;" title="Sociétés additionnelles concernées">${r.societes_multi.map(s=>`<span style="font-size:8.5px;background:var(--purple-bg);color:var(--purple);padding:1px 5px;border-radius:3px;margin-right:2px;white-space:nowrap;">${s}</span>`).join('')}</div>`:''}</td>
+                    <td><code style="font-size:11px;background:var(--surface2);padding:1px 5px;border-radius:3px;">${r.ref||'—'}</code>${(r.frap_refs&&r.frap_refs.length)?` <span style="font-size:9px;color:var(--red);background:var(--red-bg);padding:1px 5px;border-radius:3px;white-space:nowrap;" title="${r.frap_refs.length} constat(s) FRAP lié(s)">📋 ${r.frap_refs.length}</span>`:''}</td>
+                    <td style="font-size:11px;">${r.cycle||'—'}</td>
+                    <td style="font-size:11px;">${r.processus||'—'}</td>
+                    <td style="font-size:11px;max-width:200px;white-space:normal;line-height:1.35;">${r.tache||'—'}</td>
+                    <td style="font-size:10px;color:var(--text-muted);max-width:220px;white-space:normal;line-height:1.3;">${r.objectif||'—'}</td>
+                    <td style="font-size:10px;max-width:220px;white-space:normal;line-height:1.3;color:var(--orange);">${r.risque||'—'}</td>
+                    <td style="font-size:10px;color:var(--text-muted);max-width:180px;white-space:normal;line-height:1.3;">${r.desc_op||'—'}</td>
+                    <td class="t-center">${r.imp_op?`<span style="font-weight:700;color:${r.imp_op>=4?'var(--red)':r.imp_op>=3?'var(--orange)':'var(--text)'};">${r.imp_op}</span>`:'<span style="color:var(--text-dim)">—</span>'}</td>
+                    <td style="font-size:10px;color:var(--text-muted);max-width:180px;white-space:normal;line-height:1.3;">${r.desc_fin||'—'}</td>
+                    <td class="t-center">${r.imp_fin?`<span style="font-weight:700;color:${r.imp_fin>=4?'var(--red)':r.imp_fin>=3?'var(--orange)':'var(--text)'};">${r.imp_fin}</span>`:'<span style="color:var(--text-dim)">—</span>'}</td>
+                    <td style="font-size:10px;color:var(--text-muted);max-width:180px;white-space:normal;line-height:1.3;">${r.desc_rep||'—'}</td>
+                    <td class="t-center">${r.imp_rep?`<span style="font-weight:700;color:${r.imp_rep>=4?'var(--red)':r.imp_rep>=3?'var(--orange)':'var(--text)'};">${r.imp_rep}</span>`:'<span style="color:var(--text-dim)">—</span>'}</td>
+                    <td style="text-align:center;font-weight:700;">${r.impact||'—'}</td>
+                    <td style="text-align:center;font-weight:700;">${r.likelihood||'—'}</td>
+                    <td class="t-center">${rcmLevelBadge(r.inherent)}</td>
+                    <td style="font-size:10px;max-width:220px;white-space:normal;line-height:1.35;color:var(--text-muted);">${(r.controle||'—').replace(/\n/g,'<br>')}</td>
+                    <td class="t-center">${rcmEfficBadge(r.efficacite)}</td>
+                    <td class="t-center">${rcmLevelBadge(r.residuel)}</td>
+                    <td style="text-align:center;white-space:nowrap;">
+                      <span style="cursor:pointer;color:var(--accent);font-size:12px;padding:2px 5px;" class="rcm-edit-btn" data-id="${r.id}" title="Modifier">✏️</span>
+                      <span style="cursor:pointer;color:#0a7d4b;font-size:12px;padding:2px 5px;" class="rcm-exec-btn" data-id="${r.id}" title="Exécuter — créer un TAF lié à ce risque RCM">▶️</span>
+                      <span style="cursor:pointer;color:var(--red);font-size:12px;padding:2px 5px;" class="rcm-del-btn" data-id="${r.id}" title="Supprimer">🗑️</span>
+                    </td>
+                  </tr>`).join(''));
+              }
+          } else {
+              console.log(response.message);
+          }
+      },
+
+      error: function(xhr) {
+          console.log("Erreur AJAX :", xhr.responseText);
+      }
+    });
+  
 }
 
 /* ── RCM filters ── */
@@ -9396,9 +9674,45 @@ $(document).on('click','.rcm-del-btn',function(){
   const id=$(this).data('id');
   if(!confirm('Supprimer cette entrée RCM ?')) return;
   const idx=RCM_DATA.findIndex(x=>x.id===id);
-  if(idx>=0) RCM_DATA.splice(idx,1);
-  renderRCM();
-  toast('success','🗑️','Entrée RCM supprimée');
+
+  const dataDelete = {
+      action: 'supprimer',
+      id: id
+  };
+  
+  $.ajax({
+        url: "/DAC/php/rcm/actions.php",
+        type: "POST",
+        data: dataDelete,
+        dataType: "json",
+
+        success: function(response){
+
+            console.log(response);
+
+            if(response.success){  
+              renderRCM();
+              toast('success','🗑️','Entrée RCM supprimée');
+
+            }else{
+
+                toast('error','Erreur',response.message);
+            }
+        },
+
+
+        error:function(xhr,status,error){
+
+            console.log("Status :",status);
+            console.log("Erreur :",error);
+            console.log("Réponse :",xhr.responseText);
+
+            alert("Erreur serveur : "+xhr.status);
+
+            $('#soc-save-btn').prop('disabled', false);
+        }
+    });
+
 });
 
 /* ── RCM : Cascade Cycle → Processus ── */
@@ -9461,34 +9775,73 @@ $('#rcm-modal-save').on('click',()=>{
   const efficacite=+$('#rcm-f-eff').val()||3;
   const inherent=avgImpact*likelihood;
   const residuel=efficacite>0?Math.max(1,Math.round(inherent/efficacite)):inherent;
-  const entry={
-    id:_rcmEditId||('RCM-'+Date.now()),
-    filiale, ref:$('#rcm-f-ref-in').val().trim(),
-    cycle:$('#rcm-f-cycle-in').val().trim(),
+  const isEdit = socEditId !== null;
+
+  const data = {
+    action: _rcmEditId ? 'modifier' : 'ajouter',
+    filiale: filiale,              // ← s'assurer que la variable existe et contient la bonne valeur
+    ref: $('#rcm-f-ref-in').val().trim(),
+    cycle: $('#rcm-f-cycle-in').val().trim(),
     processus: ($('#rcm-f-proc-in').val()==='__autre__' ? $('#rcm-f-proc-custom').val().trim() : $('#rcm-f-proc-in').val().trim()),
-    tache, objectif:$('#rcm-f-obj-in').val().trim(),
-    risque:$('#rcm-f-risk-in').val().trim(),
-    imp_op:impOp,imp_fin:impFin,imp_rep:impRep,
-    desc_op:descOp,desc_fin:descFin,desc_rep:descRep,
-    impact:avgImpact,likelihood,inherent,
-    controle:$('#rcm-f-ctrl-in').val().trim(),
-    efficacite,residuel,
-    audit_refs:[...document.querySelectorAll('.rcm-audit-ref-cb:checked')].map(cb=>cb.value),
-    societes_multi:[...document.querySelectorAll('.rcm-soc-multi-cb:checked')].map(cb=>cb.value).filter(v=>v!==filiale),
-    frap_refs:[...document.querySelectorAll('.rcm-frap-ref-cb:checked')].map(cb=>cb.value)
+    tache: tache,                  // ← idem
+    objectif: $('#rcm-f-obj-in').val().trim(),
+    risque: $('#rcm-f-risk-in').val().trim(),
+    imp_op: impOp, imp_fin: impFin, imp_rep: impRep,
+    impact: avgImpact, likelihood, inherent,
+    controle: $('#rcm-f-ctrl-in').val().trim(),
+    efficacite, residuel,
   };
-  const _nbNewAuditLinks = linkRCMEntryToAuditsByCycle(entry);
+  if (_rcmEditId) data.id = _rcmEditId;
+
+  const _nbNewAuditLinks = linkRCMEntryToAuditsByCycle(data);
+
   if(_rcmEditId){
     const idx=RCM_DATA.findIndex(x=>x.id===_rcmEditId);
-    if(idx>=0) RCM_DATA[idx]=entry;
-    tafSyncFromRCM(entry);
+    if(idx>=0) RCM_DATA[idx]=data;
+    tafSyncFromRCM(data);
+    $.ajax({
+      url: "/DAC/php/rcm/actions.php",
+      type: "POST",
+      dataType: "json",
+      data: data,
+      success: function(response) {
+          if (response.success) {
+            $('#rcm-modal-bk').removeClass('open');
+            renderRCM();
+            toast('success','🛡️',_rcmEditId?'Entrée RCM mise à jour':'Entrée RCM ajoutée');
+            if(_nbNewAuditLinks) toast('success','🔗',_nbNewAuditLinks+' mission(s) Plan d\'audit associée(s) via le cycle « '+entry.cycle+' ».');
+          } else {
+            console.log(response.message);
+          }
+      },
+
+      error: function(xhr) {
+          console.log("Erreur AJAX :", xhr.responseText);
+      }
+    });
   } else {
-    RCM_DATA.push(entry);
+    $.ajax({
+      url: "/DAC/php/rcm/actions.php",
+      type: "POST",
+      dataType: "json",
+      data: data,
+      success: function(response) {
+          if (response.success) {
+            $('#rcm-modal-bk').removeClass('open');
+            renderRCM();
+            toast('success','🛡️',_rcmEditId?'Entrée RCM mise à jour':'Entrée RCM ajoutée');
+            if(_nbNewAuditLinks) toast('success','🔗',_nbNewAuditLinks+' mission(s) Plan d\'audit associée(s) via le cycle « '+entry.cycle+' ».');
+          } else {
+            console.log(response.message);
+          }
+      },
+
+      error: function(xhr) {
+          console.log("Erreur AJAX :", xhr.responseText);
+      }
+    });
   }
-  $('#rcm-modal-bk').removeClass('open');
-  renderRCM();
-  toast('success','🛡️',_rcmEditId?'Entrée RCM mise à jour':'Entrée RCM ajoutée');
-  if(_nbNewAuditLinks) toast('success','🔗',_nbNewAuditLinks+' mission(s) Plan d\'audit associée(s) via le cycle « '+entry.cycle+' ».');
+  
 });
 
 /* ── RCM Export Excel ── */
@@ -9822,7 +10175,7 @@ function buildTDRDoc(data, filters){
           <div contenteditable="true" class="tdr-editable-block" style="outline:none;">
             <p class="tdr-p2-sub-title">Périmètre organisationnel :</p>
             <ul class="tdr-p2-list">
-              <li><strong>Entité auditée :</strong> ${filiale2}</li>
+              <li><strong>Entité auditée :</strong> ${filiale2}totototot</li>
               <li><strong>Direction et Service Concernés :</strong> Production, Magasin, Logistique, Finance</li>
             </ul>
             <p class="tdr-p2-sub-title">Période sous revue :</p>
@@ -13125,7 +13478,7 @@ $('#db-export-excel').on('click',function(){
 
   /* ── 4. Audits ── */
   const _VALID_TYPES='Assurance / Conseil (Advisory) / Conformité (Compliance) / Audit Opérationnel / Audit Financier / Audit IT / Systèmes / Fraude / Investigation / Gouvernance / Gestion des Risques / Organisation / Formation / Autres';
-  const auditExportRows=AUDITS.map(a=>({Ref:a.ref,Titre:a.title,Societe:a.societe,Debut:a.start,Fin:a.end,Statut:a.status,Avancement:a.progress,Risque:a.risk,Difficulte:a.difficulte||'',Type:a.type,Cycle:a.cycle||'',Cycle_Autre:a.cycle_custom||'',Objectifs:a.objectifs||'',Plan_Ref:a.planRef||'',Contexte:a.contexte||'',Obj_General:a.objGeneral||'',Obj_Specifiques:a.objSpecifiques||'',Services:a.services||'',Perimetre:a.perimetreFonc||''}));
+  const auditExportRows=AUDITS.map(a=>({Ref:a.ref,Titre:a.title,Societe:a.societe,Debut:a.start,Fin:a.end,Statut:a.status,Avancement:a.progress,Risque:a.risk,Difficulte:a.difficulte||'',Type:a.type,Cycle:a.cycle||'',Cycle_Autre:a.cycle_custom||'',Objectifs:a.objectifs||'',Plan_Ref:a.planRef||'',Contexte:a.contexte||'',Obj_General:a.obj_general||'',Obj_Specifiques:a.obj_specifiques||'',Services:a.services||'',Perimetre:a.perimetreFonc||''}));
   if(!auditExportRows.length) auditExportRows.push({Ref:'AUD-2025-001',Titre:'Intitulé de l\'audit',Societe:'Nom société',Debut:'2025-01-01',Fin:'2025-12-31',Statut:'planned / open / inprogress / overdue / completed',Avancement:0,Risque:'low / medium / high / critical',Type:_VALID_TYPES,Objectifs:'Décrire les objectifs…'});
   const _wsAud2=XLSX.utils.json_to_sheet(auditExportRows);
   _wsAud2['!cols']=[{wch:14},{wch:32},{wch:24},{wch:12},{wch:12},{wch:14},{wch:10},{wch:10},{wch:10},{wch:30},{wch:24},{wch:18},{wch:40},{wch:14},{wch:40},{wch:40},{wch:40},{wch:30},{wch:40}];
@@ -17125,15 +17478,15 @@ function renderRapportAudit() {
         _raKpiBox(findings.filter(function(a){return a.criticite==='low';}).length,    'Faibles', '#15803d', '#dcfce7', null) +
       '</div>' +
       /* Objectifs & contexte */
-      (audit.objGeneral||audit.objectifs||audit.contexte ? (
+      (audit.obj_general||audit.objectifs||audit.contexte ? (
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">' +
           (audit.contexte ? '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:12px 16px;">' +
             '<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:#0369a1;margin-bottom:5px;">Contexte & Justification</div>' +
             '<div style="font-size:10.5px;color:#1e40af;line-height:1.6;">'+audit.contexte+'</div>' +
           '</div>' : '') +
-          (audit.objGeneral||audit.objectifs ? '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:12px 16px;">' +
+          (audit.obj_general||audit.objectifs ? '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:12px 16px;">' +
             '<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;color:#15803d;margin-bottom:5px;">Objectif général</div>' +
-            '<div style="font-size:10.5px;color:#166534;line-height:1.6;">'+(audit.objGeneral||audit.objectifs)+'</div>' +
+            '<div style="font-size:10.5px;color:#166534;line-height:1.6;">'+(audit.obj_general||audit.objectifs)+'</div>' +
           '</div>' : '') +
         '</div>'
       ) : '') +
@@ -17830,8 +18183,8 @@ $(document).on('click','#rrcm-audit-load-btn',function(){
     a.contexte ? a.contexte.replace(/\n/g,'<br>') : '<span style="color:var(--text-dim);">Non renseigné</span>'
   );
   let objHtml = '';
-  if(a.objGeneral) objHtml += '<div style="font-size:9.5px;font-weight:700;color:var(--text-muted);margin-bottom:2px;">Objectif général</div><div style="margin-bottom:6px;">'+a.objGeneral+'</div>';
-  if(a.objSpecifiques) objHtml += '<div style="font-size:9.5px;font-weight:700;color:var(--text-muted);margin-bottom:2px;">Objectifs spécifiques</div><div>'+a.objSpecifiques.replace(/\n/g,'<br>')+'</div>';
+  if(a.obj_general) objHtml += '<div style="font-size:9.5px;font-weight:700;color:var(--text-muted);margin-bottom:2px;">Objectif général</div><div style="margin-bottom:6px;">'+a.obj_general+'</div>';
+  if(a.obj_specifiques) objHtml += '<div style="font-size:9.5px;font-weight:700;color:var(--text-muted);margin-bottom:2px;">Objectifs spécifiques</div><div>'+a.obj_specifiques.replace(/\n/g,'<br>')+'</div>';
   if(!objHtml) objHtml = '<span style="color:var(--text-dim);">Non renseigné</span>';
   $('#rrcm-preview-objectifs').html(objHtml);
   let perHtml = '';
@@ -17869,9 +18222,9 @@ buildTDRDoc = function(data, filters){
 
   /* Section 2 — Objectifs */
   let newObj = '';
-  if(a.objGeneral) newObj += '<p class="tdr-p2-sub-title">Objectif général :</p><p class="tdr-p2-text">'+a.objGeneral+'</p>';
-  if(a.objSpecifiques){
-    const lines = a.objSpecifiques.split('\n').filter(function(l){return l.trim();});
+  if(a.obj_general) newObj += '<p class="tdr-p2-sub-title">Objectif général :</p><p class="tdr-p2-text">'+a.obj_general+'</p>';
+  if(a.obj_specifiques){
+    const lines = a.obj_specifiques.split('\n').filter(function(l){return l.trim();});
     newObj += '<p class="tdr-p2-sub-title">Objectifs spécifiques :</p><ul class="tdr-p2-list">'+lines.map(function(l){return '<li>'+l.replace(/^[-•]\s*/,'')+'</li>';}).join('')+'</ul>';
   }
   if(!newObj) newObj = '<p class="tdr-p2-text" style="color:#888;font-style:italic;">(Non renseigné)</p>';
@@ -18469,7 +18822,7 @@ showView('overview');
 
 (function(){
   const oc=ACTIONS.reduce((s,a)=>s+(a.recommandations||[]).filter(r=>r.statut==='notimplemented').length,0);
-  toast('info','◉', oc>0 ? 'Bienvenue — '+oc+' recommandation'+(oc>1?'s':'')+' non implémentée'+(oc>1?'s':'') : 'Bienvenue — Base de données vide, prête à l\'emploi');
+  //toast('info','◉', oc>0 ? 'Bienvenue — '+oc+' recommandation'+(oc>1?'s':'')+' non implémentée'+(oc>1?'s':'') : 'Bienvenue — Base de données vide, prête à l\'emploi');
 })();
 
 (function(){
