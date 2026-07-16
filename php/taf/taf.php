@@ -3,58 +3,58 @@
 class Taf
 {
     public ?int $id;
-    public string $filiale;
-    public string $ref;
-    public string $cycle;
-    public string $processus;
-    public string $tache;
-    public string $objectif;
-    public string $risque;
-    public string $imp_op;
-    public string $imp_fin;
-    public string $imp_rep;
-    public float $impact;
-    public float $likelihood;
-    public float $inherent;
-    public string $controle;
-    public string $efficacite;
-    public float $residuel;
+    public string $categorie;
+    public string $titre;
+    public string $programme;
+    public array $docs;
+    public string $contact;
+    public string $testplan;
+    public string $testresults;
+    public string $priorite;
+    public string $statut;
+    public string $auditeur;
+    public string $notes;
+    public array $societes_multi;
+    public array $audit_refs;
+    public array $fiches_test;
+    public string $statut_updated_at;
+    public string $updated_at;
 
     public function __construct(
-        $filiale,
-        $ref,
-        $cycle,
-        $processus,
-        $tache,
-        $objectif,
-        $risque,
-        $imp_op,
-        $imp_fin,
-        $imp_rep,
-        $impact,
-        $likelihood,
-        $inherent,
-        $controle,
-        $efficacite,
-        $residuel,
+        $categorie,
+        $titre,
+        $programme,
+        ?array $docs,
+        $contact,
+        $testplan,
+        $testresults,
+        $priorite,
+        $statut,
+        $auditeur,
+        $notes,
+        $statut_updated_at,
+        $updated_at,
+        ?array $societes_multi,
+        ?array $audit_refs,
+        ?array $fiches_test,
         ?int $id = null
     ) {
         $this->id = $id;
-        $this->filiale = $filiale;
-        $this->ref = $ref;
-        $this->cycle = $cycle;
-        $this->processus = $processus;
-        $this->tache = $tache;
-        $this->objectif = $objectif;
-        $this->risque = $risque;
-        $this->imp_op = $imp_op;
-        $this->imp_fin = $imp_fin;
-        $this->imp_rep = $imp_rep;
-        $this->impact = (float) $impact;
-        $this->likelihood = (float) $likelihood;
-        $this->inherent = (float) $inherent;
-        $this->controle = $controle;
-        $this->efficacite = $efficacite;
-        $this->residuel = (float) $residuel;
+        $this->categorie = $categorie;
+        $this->titre = $titre;
+        $this->programme = $programme;
+        $this->docs = $docs ?? [];
+        $this->contact = $contact;
+        $this->testplan = $testplan;
+        $this->testresults = $testresults;
+        $this->priorite = $priorite;
+        $this->statut = $statut;
+        $this->auditeur = $auditeur;
+        $this->notes = $notes;
+        $this->societes_multi = $societes_multi ?? [];
+        $this->audit_refs = $audit_refs ?? [];
+        $this->fiches_test = $fiches_test ?? [];
+        $this->statut_updated_at = $statut_updated_at;
+         $this->updated_at = $updated_at;
     }
 }

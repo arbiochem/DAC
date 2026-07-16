@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../Database.php';
-require_once __DIR__ . '/rcm.php';
+require_once __DIR__ . '/taf.php';
 
 class Repository {
     private PDO $db;
@@ -10,43 +10,44 @@ class Repository {
         $this->db = Database::getInstance()->getConnexion();
     }
 
-    // CREATE : ajouter une ligne RCM
-    public function ajouter(Rcm $rcm): bool {
-        $sql = "INSERT INTO rcm (
-                    filiale, ref, cycle, processus, tache, objectif, risque,
-                    imp_op, imp_fin, imp_rep, impact, likelihood, inherent,
-                    controle, efficacite, residuel
+    // CREATE : ajouter une TAF
+    public function ajouter(Taf $taf): bool {
+        $sql = "INSERT INTO taf (
+                    categorie, titre, programme, docs, contact,
+                    testplan, testresults, priorite, statut, auditeur, notes, societes_multi, audit_refs, fiches_test
                 ) VALUES (
-                    :filiale, :ref, :cycle, :processus, :tache, :objectif, :risque,
-                    :imp_op, :imp_fin, :imp_rep, :impact, :likelihood, :inherent,
-                    :controle, :efficacite, :residuel
+                    :categorie, :titre, :programme, :docs, :contact,
+                    :testplan, :testresults, :priorite, :statut, :auditeur, :notes,
+                    :societes_multi,
+                    :audit_refs,
+                    :fiches_test
                 )";
 
         $stmt = $this->db->prepare($sql);
-        $success = $stmt->execute($this->toParams($rcm));
+        $success = $stmt->execute($this->toParams($taf));
 
         if ($success) {
-            $rcm->id = (int) $this->db->lastInsertId();
+            $taf->id = (int) $this->db->lastInsertId();
         }
 
         return $success;
     }
 
-    // READ : récupérer toutes les lignes RCM
+    // READ : récupérer toutes les TAF
     public function getAll(): array {
-        $stmt = $this->db->query("SELECT * FROM rcm");
+        $stmt = $this->db->query("SELECT * FROM taf");
         $resultats = $stmt->fetchAll();
 
-        $rcms = [];
+        $tafs = [];
         foreach ($resultats as $ligne) {
-            $rcms[] = $this->hydrate($ligne);
+            $tafs[] = $this->hydrate($ligne);
         }
-        return $rcms;
+        return $tafs;
     }
 
-    // READ : récupérer une ligne RCM par son id
-    public function getById(int $id): ?Rcm {
-        $sql = "SELECT * FROM rcm WHERE id = :id";
+    // READ : récupérer une TAF par son id
+    public function getById(int $id): ?Taf {
+        $sql = "SELECT * FROM taf WHERE id = :id";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['id' => $id]);
         $ligne = $stmt->fetch();
@@ -58,83 +59,90 @@ class Repository {
         return $this->hydrate($ligne);
     }
 
-    // UPDATE : mettre à jour une ligne RCM
-    public function modifier(Rcm $rcm): bool {
-        $sql = "UPDATE rcm SET
-            filiale=:filiale,
-            cycle=:cycle,
-            processus=:processus,
-            tache=:tache,
-            objectif=:objectif,
-            risque=:risque,
-            imp_op=:imp_op,
-            imp_fin=:imp_fin,
-            imp_rep=:imp_rep,
-            impact=:impact,
-            likelihood=:likelihood,
-            inherent=:inherent,
-            controle=:controle,
-            efficacite=:efficacite,
-            residuel=:residuel
-        WHERE ref = :ref";
+    // UPDATE : mettre à jour une TAF
+    public function modifier(Taf $taf): bool {
+        $sql = "UPDATE taf SET
+            categorie=:categorie,
+            titre=:titre,
+            programme=:programme,
+            docs=:docs,
+            contact=:contact,
+            testplan=:testplan,
+            testresults=:testresults,
+            priorite=:priorite,
+            statut=:statut,
+            auditeur=:auditeur,
+            notes=:notes,
+            societes_multi=:societes_multi,
+            audit_refs=:audit_refs,
+            fiches_test=:fiches_test,
+            statut_updated_at=:statut_updated_at,
+            updated_at=:updated_at
+        WHERE id = :id";
 
         $stmt = $this->db->prepare($sql);
 
-        $params = $this->toParams($rcm);
-        $params['ref'] = $rcm->ref;
+        $params = $this->toParams($taf);
+        $params['id'] = $taf->id;
 
         return $stmt->execute($params);
     }
 
-    // DELETE : supprimer une ligne RCM
+    // DELETE : supprimer une TAF
     public function supprimer(int $id): bool {
-        $sql = "DELETE FROM rcm WHERE id = :id";
+        $sql = "DELETE FROM taf WHERE id = :id";
         $stmt = $this->db->prepare($sql);
         return $stmt->execute(['id' => $id]);
     }
 
-    // Construit un objet Rcm à partir d'une ligne de résultat SQL
-    private function hydrate(array $ligne): Rcm {
-        return new Rcm(
-            $ligne['filiale'],
-            $ligne['ref'],
-            $ligne['cycle'],
-            $ligne['processus'],
-            $ligne['tache'],
-            $ligne['objectif'],
-            $ligne['risque'],
-            $ligne['imp_op'],
-            $ligne['imp_fin'],
-            $ligne['imp_rep'],
-            $ligne['impact'],
-            $ligne['likelihood'],
-            $ligne['inherent'],
-            $ligne['controle'],
-            $ligne['efficacite'],
-            $ligne['residuel'],
+    private function decodeArrayField($value) {
+        if (is_array($value)) return $value;
+        $decoded = json_decode($value, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    // Construit un objet Taf à partir d'une ligne de résultat SQL
+    private function hydrate(array $ligne): Taf {
+        return new Taf(
+            $ligne['categorie'],
+            $ligne['titre'],
+            $ligne['programme'],
+            $this->decodeArrayField($ligne['docs'], true) ?? [],
+            $ligne['contact'],
+            $ligne['testplan'],
+            $ligne['testresults'],
+            $ligne['priorite'],
+            $ligne['statut'],
+            $ligne['auditeur'],
+            $ligne['notes'],
+            $ligne['statut_updated_at'],
+            $ligne['updated_at'],
+            $this->decodeArrayField($ligne['societes_multi'], true) ?? [],
+            $this->decodeArrayField($ligne['audit_refs'], true) ?? [],
+            $this->decodeArrayField($ligne['fiches_test'], true) ?? [],
             $ligne['id']
         );
     }
 
     // Construit le tableau de paramètres pour les requêtes préparées
-    private function toParams(Rcm $rcm): array {
+    private function toParams(Taf $taf): array {
         return [
-            'filiale'    => $rcm->filiale,
-            'ref'        => $rcm->ref,
-            'cycle'      => $rcm->cycle,
-            'processus'  => $rcm->processus,
-            'tache'      => $rcm->tache,
-            'objectif'   => $rcm->objectif,
-            'risque'     => $rcm->risque,
-            'imp_op'     => $rcm->imp_op,
-            'imp_fin'    => $rcm->imp_fin,
-            'imp_rep'    => $rcm->imp_rep,
-            'impact'     => $rcm->impact,
-            'likelihood' => $rcm->likelihood,
-            'inherent'   => $rcm->inherent,
-            'controle'   => $rcm->controle,
-            'efficacite' => $rcm->efficacite,
-            'residuel'   => $rcm->residuel,
+            'categorie'   => $taf->categorie,
+            'titre'       => $taf->titre,
+            'programme'      => $taf->programme,
+            'docs'           => json_encode($taf->docs),
+            'contact'        => $taf->contact,
+            'testplan'       => $taf->testplan,
+            'testresults'    => $taf->testresults,
+            'priorite'       => $taf->priorite,
+            'statut'         => $taf->statut,
+            'auditeur'       => $taf->auditeur,
+            'notes'          => $taf->notes,
+            'statut_updated_at'    => $taf->statut_updated_at,
+            'updated_at'    => $taf->updated_at,
+            'societes_multi' => json_encode($taf->societes_multi),
+            'audit_refs'     => json_encode($taf->audit_refs),
+            'fiches_test'    => json_encode($taf->fiches_test)
         ];
     }
 }

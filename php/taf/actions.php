@@ -1,102 +1,137 @@
 <?php
 
-require_once 'repository.php'; // adapte le chemin/nom si Repository dédié à Rcm
-require_once 'rcm.php';
+require_once 'repository.php'; // adapte le chemin/nom si Repository dédié à Taf
+require_once 'taf.php';
 
 header('Content-Type: application/json');
 
 $action = $_POST['action'] ?? '';
 
-$repo = new Repository(); // ou RcmRepository si tu sépares
+$repo = new Repository(); // ou TafRepository si tu sépares
 
 switch ($action) {
     case 'ajouter':
-        $rcm = new Rcm(
-            $_POST['filiale'],
-            $_POST['ref'],
-            $_POST['cycle'],
-            $_POST['processus'],
-            $_POST['tache'],
-            $_POST['objectif'],
-            $_POST['risque'],
-            $_POST['imp_op'],
-            $_POST['imp_fin'],
-            $_POST['imp_rep'],
-            $_POST['impact'],
-            $_POST['likelihood'],
-            $_POST['inherent'],
-            $_POST['controle'],
-            $_POST['efficacite'],
-            $_POST['residuel']
+        $docs = json_decode($_POST['docs'] ?? '[]', true) ?? [];
+
+        $societes_multi = $_POST['societes_multi'] ?? [];
+        if (is_string($societes_multi)) {
+            $societes_multi = json_decode($societes_multi, true) ?: [];
+        }
+
+        $audit_refs = $_POST['audit_refs'] ?? [];
+        if (is_string($audit_refs)) {
+            $audit_refs = json_decode($audit_refs, true) ?: [];
+        }
+
+        $fiches_test = $_POST['fiches_test'] ?? [];
+        if (is_string($fiches_test)) {
+            $fiches_test = json_decode($fiches_test, true) ?: [];
+        }
+
+
+        $taf = new Taf(
+            $_POST['categorie'],
+            $_POST['titre'],
+            $_POST['programme'],
+            $docs,
+            $_POST['contact'],
+            $_POST['testplan'],
+            $_POST['testresults'],
+            $_POST['priorite'],
+            $_POST['statut'],
+            $_POST['auditeur'],
+            $_POST['notes'],
+            $_POST['statut_updated_at'],
+            $_POST['updated_at'],
+            $societes_multi,   // <-- tableau décodé, plus $_POST direct
+            $audit_refs,       // <-- idem
+            $fiches_test
         );
 
-        $ok = $repo->ajouter($rcm);
+        $ok = $repo->ajouter($taf);
 
         echo json_encode([
             "success" => $ok,
-            "id"      => $ok ? $rcm->id : null,
+            "id"      => $ok ? $taf->id : null,
         ]);
         break;
 
     case 'lister':
-        $rcms = $repo->getAll();
+        $tafs = $repo->getAll();
 
         $data = [];
-        foreach ($rcms as $r) {
+        foreach ($tafs as $t) {
             $data[] = [
-                "id"         => $r->id,
-                "filiale"    => $r->filiale,
-                "ref"        => $r->ref,
-                "cycle"      => $r->cycle,
-                "processus"  => $r->processus,
-                "tache"      => $r->tache,
-                "objectif"   => $r->objectif,
-                "risque"     => $r->risque,
-                "imp_op"     => $r->imp_op,
-                "imp_fin"    => $r->imp_fin,
-                "imp_rep"    => $r->imp_rep,
-                "impact"     => $r->impact,
-                "likelihood" => $r->likelihood,
-                "inherent"   => $r->inherent,
-                "controle"   => $r->controle,
-                "efficacite" => $r->efficacite,
-                "residuel"   => $r->residuel,
+                "id"          => $t->id,
+                "categorie"   => $t->categorie,
+                "titre"       => $t->titre,
+                "programme"   => $t->programme,
+                "docs"        => $t->docs,
+                "contact"     => $t->contact,
+                "testplan"    => $t->testplan,
+                "testresults" => $t->testresults,
+                "priorite"    => $t->priorite,
+                "statut"      => $t->statut,
+                "auditeur"    => $t->auditeur,
+                "notes"       => $t->notes,
+                "updated_at"       => $t->updated_at,
+                "societes_multi"       => $t->societes_multi,
+                "audit_refs"       => $t->audit_refs,
+                "fiches_test"       => $t->fiches_test
             ];
         }
 
         echo json_encode([
             "success" => true,
             "data"    => $data
-        ]);
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         break;
 
     case 'modifier':
-        $ref = $_POST['ref'] ?? null;
-        if (!$ref) {
-            echo json_encode(["success" => false, "message" => "Référence manquante"]);
+        $id = $_POST['id'] ?? null;
+        if (!$id) {
+            echo json_encode(["success" => false, "message" => "ID manquant"]);
             break;
         }
 
-        $rcm = new Rcm(
-            $_POST['filiale'],
-            $_POST['ref'],
-            $_POST['cycle'],
-            $_POST['processus'],
-            $_POST['tache'],
-            $_POST['objectif'],
-            $_POST['risque'],
-            $_POST['imp_op'],
-            $_POST['imp_fin'],
-            $_POST['imp_rep'],
-            $_POST['impact'],
-            $_POST['likelihood'],
-            $_POST['inherent'],
-            $_POST['controle'],
-            $_POST['efficacite'],
-            $_POST['residuel']
+        $docs = json_decode($_POST['docs'] ?? '[]', true) ?? [];
+
+        $societes_multi = $_POST['societes_multi'] ?? [];
+        if (is_string($societes_multi)) {
+            $societes_multi = json_decode($societes_multi, true) ?: [];
+        }
+
+        $audit_refs = $_POST['audit_refs'] ?? [];
+        if (is_string($audit_refs)) {
+            $audit_refs = json_decode($audit_refs, true) ?: [];
+        }
+
+        $fiches_test = $_POST['fiches_test'] ?? [];
+        if (is_string($fiches_test)) {
+            $fiches_test = json_decode($fiches_test, true) ?: [];
+        }
+
+        $taf = new Taf(
+            $_POST['categorie'],
+            $_POST['titre'],
+            $_POST['programme'],
+            $docs,
+            $_POST['contact'],
+            $_POST['testplan'],
+            $_POST['testresults'],
+            $_POST['priorite'],
+            $_POST['statut'],
+            $_POST['auditeur'],
+            $_POST['notes'],
+            $_POST['statut_updated_at'],
+            $_POST['updated_at'],
+            $societes_multi,
+            $audit_refs,
+            $fiches_test,
+            (int) $id
         );
 
-        $ok = $repo->modifier($rcm);
+        $ok = $repo->modifier($taf);
 
         echo json_encode([
             "success" => $ok

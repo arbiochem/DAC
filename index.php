@@ -5096,14 +5096,72 @@ function openAbsenceModal(idx){
     const hdebut=isIntraDay?($('#ab-hdebut').val()||''):'' ;
     const hfin=isIntraDay?($('#ab-hfin').val()||''):'';
     if(isIntraDay&&hdebut&&hfin&&hdebut>=hfin){toast('error','!','L\'heure de début doit être < l\'heure de fin');return;}
-    const obj={id:isEdit?a.id:('ABS-'+(Date.now()%1000000)),auditeur,debut,fin,hdebut,hfin,type,statut:$('#ab-statut').val(),note:$('#ab-note').val().trim()};
+    const data={action:'ajouter',auditeur,debut,fin,hdebut,hfin,type,statut:$('#ab-statut').val(),note:$('#ab-note').val().trim()};
+    
     $(document).off('change.abpreview');$(document).off('change.abheures');delete window._absenceSaveHandler;
-    if(isEdit){Object.assign(ABSENCES[idx],obj);}else{ABSENCES.push(obj);}
-    closeModal();renderAbsenceList();renderDispoTable();renderAuditeurCards();updateAbsenceBadge();
-    dbSave();
-    const nConf=detectAbsenceConflicts(obj).length;
-    toast(nConf>0?'warning':'success',nConf>0?'⚠️':'✅',(isEdit?'Absence mise à jour':'Absence enregistrée')+(nConf>0?' — '+nConf+' conflit(s)':''));
+    if(isEdit){
+      const id=ABSENCES[idx].id;
+      
+      Object.assign(ABSENCES[idx],data);
+      const data_modifier_conge={action:'modifier',auditeur,debut,fin,hdebut,hfin,type,statut:$('#ab-statut').val(),note:$('#ab-note').val().trim(),id:id};
+      $.ajax({
+        url: "/DAC/php/conge/actions.php",
+        type: "POST",
+        data: data_modifier_conge,
+        dataType: "json",
 
+        success: function(response){
+            console.log(response);
+
+            if(response.success){
+              closeModal();renderAbsenceList();renderDispoTable();renderAuditeurCards();updateAbsenceBadge();
+              const nConf=detectAbsenceConflicts(data).length;
+              toast(nConf>0?'warning':'success',nConf>0?'⚠️':'✅',(isEdit?'Absence mise à jour':'Absence enregistrée')+(nConf>0?' — '+nConf+' conflit(s)':''));                
+            }else{
+
+                toast('error','Erreur',response.message);
+
+            }
+        },
+        error:function(xhr,status,error){
+
+            console.log("Status :",status);
+            console.log("Erreur :",error);
+            console.log("Réponse :",xhr.responseText);
+
+            alert("Erreur serveur : "+xhr.status);
+        }
+      });
+    }else{
+      $.ajax({
+        url: "/DAC/php/conge/actions.php",
+        type: "POST",
+        data: data,
+        dataType: "json",
+
+        success: function(response){
+            console.log(response);
+
+            if(response.success){
+              closeModal();renderAbsenceList();renderDispoTable();renderAuditeurCards();updateAbsenceBadge();
+              const nConf=detectAbsenceConflicts(data).length;
+              toast(nConf>0?'warning':'success',nConf>0?'⚠️':'✅',(isEdit?'Absence mise à jour':'Absence enregistrée')+(nConf>0?' — '+nConf+' conflit(s)':''));                
+            }else{
+
+                toast('error','Erreur',response.message);
+
+            }
+        },
+        error:function(xhr,status,error){
+
+            console.log("Status :",status);
+            console.log("Erreur :",error);
+            console.log("Réponse :",xhr.responseText);
+
+            alert("Erreur serveur : "+xhr.status);
+        }
+      });
+    }
   };
 }
 
@@ -5111,56 +5169,110 @@ $(document).on('click','#btn-add-absence',function(){openAbsenceModal(-1);});
 $(document).on('change','#absence-filter-aud',function(){renderAbsenceList();});
 
 function renderAbsenceList(){
+  $.ajax({
+    url: "/DAC/php/conge/actions.php",
+    type: "POST",
+    dataType: "json",
+    data: {
+        action: "lister"
+    },
 
-  const $faud=$('#absence-filter-aud'),curAud=$faud.val();
-  $faud.find('option:not(:first-child)').remove();
-  AUDITEURS.forEach(a=>{const v=`${a.prenom} ${a.nom}`;$faud.append(`<option value="${v}"${v===curAud?' selected':''}>${v}</option>`);});
-  const filterAud=$faud.val()||'';
-  const list=filterAud?ABSENCES.filter(a=>a.auditeur===filterAud):ABSENCES;
-  const $tb=$('#absence-list-tbody').empty();
-  if(!list.length){$('#absence-list-empty').show();return;}
-  $('#absence-list-empty').hide();
-  const today=new Date();today.setHours(0,0,0,0);
-  list.forEach(ab=>{
-    const realIdx=ABSENCES.indexOf(ab),tc=ABSENCE_TYPES[ab.type]||ABSENCE_TYPES.recuperation,wdays=workdaysBetween(ab.debut,ab.fin),conflicts=detectAbsenceConflicts(ab);
-    const isPast=new Date(ab.fin)<today,isActive=new Date(ab.debut)<=today&&new Date(ab.fin)>=today;
-    const statut=ab.statut||'planifie';
-    const statutHtml=statut==='valide'
-      ?`<span style="font-size:10px;background:#d1fae5;color:#059669;border-radius:4px;padding:2px 8px;font-weight:700;border:1px solid #a7f3d0;">✅ Validé</span>`
-      :`<span style="font-size:10px;background:var(--yellow-bg);color:var(--yellow);border-radius:4px;padding:2px 8px;font-weight:700;border:1px solid var(--yellow);">🗓️ Planifié</span>`;
-    let stateHtml=isPast?`<span style="font-size:9px;background:var(--surface3);color:var(--text-dim);border-radius:3px;padding:1px 5px;">Passée</span>`:isActive?`<span style="font-size:9px;background:#fff3e0;color:#e67e22;border-radius:3px;padding:1px 5px;font-weight:700;">En cours</span>`:`<span style="font-size:9px;background:var(--accent-bg);color:var(--accent);border-radius:3px;padding:1px 5px;font-weight:700;">À venir</span>`;
+    success: function(response) {
+        if (response.success) {
+          ////console.log(response.data);
+          ABSENCES=response.data;
 
-    let dureeTxt='';
-    if(ab.debut===ab.fin&&ab.hdebut&&ab.hfin){
-      const [hh1,mm1]=(ab.hdebut||'00:00').split(':').map(Number),[hh2,mm2]=(ab.hfin||'00:00').split(':').map(Number);
-      const diff=(hh2*60+mm2)-(hh1*60+mm1);
-      if(diff>0){const hh=Math.floor(diff/60),mm=diff%60;dureeTxt=`⏱ ${hh>0?hh+'h':''}${mm>0?(mm+'min'):''}`;}      else{dureeTxt='< 1h';}
-    } else {dureeTxt=wdays+' j';}
-    $tb.append(`<tr>
-      <td style="font-weight:600;font-size:12px;">${ab.auditeur}</td>
-      <td><span style="font-size:10px;font-weight:600;color:${tc.color};background:${tc.bg};padding:2px 7px;border-radius:10px;">${tc.label}</span>&nbsp;${stateHtml}</td>
-      <td>${statutHtml}</td>
-      <td style="font-family:var(--mono);font-size:11px;">${ab.debut}${ab.debut===ab.fin&&ab.hdebut?` <span style="color:var(--accent);font-size:10px;">${ab.hdebut}</span>`:''}</td>
-      <td style="font-family:var(--mono);font-size:11px;">${ab.fin}${ab.debut===ab.fin&&ab.hfin?` <span style="color:var(--accent);font-size:10px;">${ab.hfin}</span>`:''}</td>
-      <td style="font-family:var(--mono);font-size:11px;text-align:center;font-weight:700;">${dureeTxt}</td>
-      <td style="font-size:11px;color:var(--text-muted);">${ab.note||'—'}</td>
-      <td>${conflicts.length?`<span style="color:var(--red);font-size:10px;font-weight:700;">⚠️ ${conflicts.length} conflit(s)</span><br>`+conflicts.slice(0,2).map(c=>`<span style="font-size:9px;color:var(--text-muted);">• ${c.mission} (${c.jours}j)</span>`).join('<br>'):`<span style="color:var(--green);font-size:10px;">✅ Aucun</span>`}</td>
-      <td style="white-space:nowrap;vertical-align:top;padding:5px 6px;">
-        <div style="display:flex;flex-direction:column;gap:3px;align-items:stretch;">
-          <button class="btn abs-edit-btn" data-absidx="${realIdx}" style="padding:2px 6px;font-size:10px;border-radius:4px;white-space:nowrap;">✏️ Modifier</button>
-          <button class="btn abs-del-btn" data-absidx="${realIdx}" style="padding:2px 6px;font-size:10px;border-radius:4px;color:var(--red);border-color:var(--red);white-space:nowrap;">🗑️ Suppr.</button>
-          <button class="btn abs-add-like-btn" data-auditeur="${ab.auditeur}" style="padding:2px 6px;font-size:10px;border-radius:4px;color:var(--green);border-color:var(--green);white-space:nowrap;" title="Ajouter une absence pour cet auditeur">＋ Ajouter</button>
-        </div>
-      </td>
-    </tr>`);
-  });
+          const $faud=$('#absence-filter-aud'),curAud=$faud.val();
+          $faud.find('option:not(:first-child)').remove();
+          AUDITEURS.forEach(a=>{const v=`${a.prenom} ${a.nom}`;$faud.append(`<option value="${v}"${v===curAud?' selected':''}>${v}</option>`);});
+          const filterAud=$faud.val()||'';
+          const list=filterAud?ABSENCES.filter(a=>a.auditeur===filterAud):ABSENCES;
+          const $tb=$('#absence-list-tbody').empty();
+          if(!list.length){$('#absence-list-empty').show();return;}
+          $('#absence-list-empty').hide();
+          const today=new Date();today.setHours(0,0,0,0);
+          list.forEach(ab=>{
+            const realIdx=ABSENCES.indexOf(ab),tc=ABSENCE_TYPES[ab.type]||ABSENCE_TYPES.recuperation,wdays=workdaysBetween(ab.debut,ab.fin),conflicts=detectAbsenceConflicts(ab);
+            const isPast=new Date(ab.fin)<today,isActive=new Date(ab.debut)<=today&&new Date(ab.fin)>=today;
+            const statut=ab.statut||'planifie';
+            const statutHtml=statut==='valide'
+              ?`<span style="font-size:10px;background:#d1fae5;color:#059669;border-radius:4px;padding:2px 8px;font-weight:700;border:1px solid #a7f3d0;">✅ Validé</span>`
+              :`<span style="font-size:10px;background:var(--yellow-bg);color:var(--yellow);border-radius:4px;padding:2px 8px;font-weight:700;border:1px solid var(--yellow);">🗓️ Planifié</span>`;
+            let stateHtml=isPast?`<span style="font-size:9px;background:var(--surface3);color:var(--text-dim);border-radius:3px;padding:1px 5px;">Passée</span>`:isActive?`<span style="font-size:9px;background:#fff3e0;color:#e67e22;border-radius:3px;padding:1px 5px;font-weight:700;">En cours</span>`:`<span style="font-size:9px;background:var(--accent-bg);color:var(--accent);border-radius:3px;padding:1px 5px;font-weight:700;">À venir</span>`;
+
+            let dureeTxt='';
+            if(ab.debut===ab.fin&&ab.hdebut&&ab.hfin){
+              const [hh1,mm1]=(ab.hdebut||'00:00').split(':').map(Number),[hh2,mm2]=(ab.hfin||'00:00').split(':').map(Number);
+              const diff=(hh2*60+mm2)-(hh1*60+mm1);
+              if(diff>0){const hh=Math.floor(diff/60),mm=diff%60;dureeTxt=`⏱ ${hh>0?hh+'h':''}${mm>0?(mm+'min'):''}`;}      else{dureeTxt='< 1h';}
+            } else {dureeTxt=wdays+' j';}
+            $tb.append(`<tr>
+              <td style="font-weight:600;font-size:12px;">${ab.auditeur}</td>
+              <td><span style="font-size:10px;font-weight:600;color:${tc.color};background:${tc.bg};padding:2px 7px;border-radius:10px;">${tc.label}</span>&nbsp;${stateHtml}</td>
+              <td>${statutHtml}</td>
+              <td style="font-family:var(--mono);font-size:11px;">${ab.debut}${ab.debut===ab.fin&&ab.hdebut?` <span style="color:var(--accent);font-size:10px;">${ab.hdebut}</span>`:''}</td>
+              <td style="font-family:var(--mono);font-size:11px;">${ab.fin}${ab.debut===ab.fin&&ab.hfin?` <span style="color:var(--accent);font-size:10px;">${ab.hfin}</span>`:''}</td>
+              <td style="font-family:var(--mono);font-size:11px;text-align:center;font-weight:700;">${dureeTxt}</td>
+              <td style="font-size:11px;color:var(--text-muted);">${ab.note||'—'}</td>
+              <td>${conflicts.length?`<span style="color:var(--red);font-size:10px;font-weight:700;">⚠️ ${conflicts.length} conflit(s)</span><br>`+conflicts.slice(0,2).map(c=>`<span style="font-size:9px;color:var(--text-muted);">• ${c.mission} (${c.jours}j)</span>`).join('<br>'):`<span style="color:var(--green);font-size:10px;">✅ Aucun</span>`}</td>
+              <td style="white-space:nowrap;vertical-align:top;padding:5px 6px;">
+                <div style="display:flex;flex-direction:column;gap:3px;align-items:stretch;">
+                  <button class="btn abs-edit-btn" data-absidx="${realIdx}" style="padding:2px 6px;font-size:10px;border-radius:4px;white-space:nowrap;">✏️ Modifier</button>
+                  <button class="btn abs-del-btn" data-absidx="${realIdx}" style="padding:2px 6px;font-size:10px;border-radius:4px;color:var(--red);border-color:var(--red);white-space:nowrap;">🗑️ Suppr.</button>
+                  <button class="btn abs-add-like-btn" data-auditeur="${ab.auditeur}" style="padding:2px 6px;font-size:10px;border-radius:4px;color:var(--green);border-color:var(--green);white-space:nowrap;" title="Ajouter une absence pour cet auditeur">＋ Ajouter</button>
+                </div>
+              </td>
+            </tr>`);
+          });
+          
+        } else {
+            console.log(response.message);
+        }
+    },
+
+    error: function(xhr) {
+        console.log("Erreur AJAX :", xhr.responseText);
+    }
+});
 }
 $(document).on('click','.abs-edit-btn',function(){openAbsenceModal(parseInt($(this).data('absidx')));});
 $(document).on('click','.abs-del-btn',function(){
   const idx=parseInt($(this).data('absidx')),ab=ABSENCES[idx];if(!ab)return;
+
   if(!confirm(`Supprimer l'absence de ${ab.auditeur} (${ab.debut} → ${ab.fin}) ?`))return;
-  ABSENCES.splice(idx,1);renderAbsenceList();renderDispoTable();renderAuditeurCards();updateAbsenceBadge();dbSave();
-  toast('success','🗑','Absence supprimée');
+
+  const dataDelete = {
+      action: 'supprimer',
+      id: ab.id
+  };
+  
+    $.ajax({
+        url: "/DAC/php/conge/actions.php",
+        type: "POST",
+        data: dataDelete,
+        dataType: "json",
+
+        success: function(response){
+            console.log(response);
+            if(response.success){  
+              ABSENCES.splice(idx,1);renderAbsenceList();renderDispoTable();renderAuditeurCards();updateAbsenceBadge();dbSave();
+              toast('success','🗑','Absence supprimée');
+            }else{
+
+                toast('error','Erreur',response.message);
+            }
+        },
+
+
+        error:function(xhr,status,error){
+
+            console.log("Status :",status);
+            console.log("Erreur :",error);
+            console.log("Réponse :",xhr.responseText);
+
+            alert("Erreur serveur : "+xhr.status);
+        }
+    });
 });
 
 $(document).on('click','.abs-add-like-btn',function(){
@@ -6274,7 +6386,7 @@ function renderAudits(f){
 
       success: function(response) {
           if (response.success) {
-              console.log(response.data);
+              //console.log(response.data);
 
               // ══════════════════════════════════════════════════════════
               // NORMALISATION : schéma DB brut → schéma attendu par l'app
@@ -9452,7 +9564,7 @@ function renderRCM(){
 
       success: function(response) {
           if (response.success) {
-              console.log(response.data);
+              //console.log(response.data);
               RCM_DATA=response.data;
               const _officialCycles = Object.keys(RCM_CYCLES);
               const _dbCycles = RCM_DATA.map(r=>r.cycle).filter(Boolean);
@@ -10089,7 +10201,7 @@ function buildTDRDoc(data, filters){
     : (new Date().getFullYear());
   const anneeDisplay = new Date().getFullYear();
   const filiale2 = filialeDisplay || '{{NOM_FILIALE}}';
-
+  let editrisque=null;
   const tdrPage2 = `
 <div class="tdr-p2-page">
 
@@ -10258,214 +10370,238 @@ $('#rcm-print-btn').on('click', () => {
 });
 
 function renderRisks(){
-  try{
-    const statut = $('#risk-f-statut').val()||'';
-    const cat    = $('#risk-f-cat').val()||'';
-    const soc    = $('#risk-f-soc').val()||'';
+  $.ajax({
+    url: "/DAC/php/risque/actions.php",
+    type: "POST",
+    dataType: "json",
+    data: {
+        action: "lister"
+    },
 
-    // Populate société filter
-    const socs = [...new Set(RISKS.map(r=>r.societe).filter(Boolean))].sort();
-    const $fs = $('#risk-f-soc');
-    const curSoc = $fs.val();
-    $fs.find('option:not(:first-child)').remove();
-    socs.forEach(s=>$fs.append(`<option value="${s}"${s===curSoc?' selected':''}>${s}</option>`));
+    success: function(response) {
+      if (response.success) {
+        console.log(response.data);
+        RISKS = response.data;
+        
 
-    let rows = RISKS.filter(r=>{
-      if(statut && r.statut !== statut) return false;
-      if(cat && r.categorie !== cat) return false;
-      if(soc && r.societe !== soc) return false;
-      return true;
-    });
+        try{
+          const statut = $('#risk-f-statut').val()||'';
+          const cat    = $('#risk-f-cat').val()||'';
+          const soc    = $('#risk-f-soc').val()||'';
 
-    const total   = RISKS.length;
-    const open    = RISKS.filter(r=>r.statut==='open').length;
-    const mitige  = RISKS.filter(r=>r.statut==='mitigé').length;
-    const clos    = RISKS.filter(r=>r.statut==='clos').length;
-    const critical= RISKS.filter(r=>riskScore(r.probabilite,r.impact)>=12).length;
-    $('#risk-kpi-bar').html([
-      {l:'Total',     v:total,    c:'var(--accent)',  bg:'var(--accent-bg)'},
-      {l:'Ouverts',   v:open,     c:'var(--orange)',  bg:'var(--orange-bg)'},
-      {l:'Mitigés',   v:mitige,   c:'var(--yellow)',  bg:'var(--yellow-bg)'},
-      {l:'Clos',      v:clos,     c:'var(--green)',   bg:'var(--green-bg)'},
-      {l:'Critiques', v:critical, c:'var(--red)',     bg:'var(--red-bg)'},
-    ].map(k=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow);">
-      <div style="width:32px;height:32px;border-radius:7px;background:${k.bg};display:grid;place-items:center;font-size:18px;font-weight:800;color:${k.c};font-family:var(--mono);flex-shrink:0;">${k.v}</div>
-      <div style="font-size:11px;color:var(--text-muted);">${k.l}</div>
-    </div>`).join(''));
+          // Populate société filter
+          const socs = [...new Set(RISKS.map(r=>r.societe).filter(Boolean))].sort();
+          const $fs = $('#risk-f-soc');
+          const curSoc = $fs.val();
+          $fs.find('option:not(:first-child)').remove();
+          socs.forEach(s=>$fs.append(`<option value="${s}"${s===curSoc?' selected':''}>${s}</option>`));
 
-    // ── Risk Control Matrix — double couche : Inhérent + Résiduel (COSO) ──
-    const PROBS   = ['critical','high','medium','low'];
-    const IMPACTS = ['low','medium','high','critical'];
-    const PLABELS = {low:'Faible',medium:'Moyen',high:'Élevé',critical:'Critique'};
-    const SCORE_TO_CELL = s => {
+          let rows = RISKS.filter(r=>{
+            if(statut && r.statut !== statut) return false;
+            if(cat && r.categorie !== cat) return false;
+            if(soc && r.societe !== soc) return false;
+            return true;
+          });
 
-      const RANK = {low:0,medium:1,high:2,critical:3};
-      let best = null, bestDiff = 99;
-      PROBS.forEach((p,pi)=> IMPACTS.forEach((im,ii)=>{
-        const diff = Math.abs(riskScore(p,im)-s);
-        if(diff < bestDiff){ bestDiff=diff; best={pi,ii}; }
-      }));
-      return best;
-    };
+          const total   = RISKS.length;
+          const open    = RISKS.filter(r=>r.statut==='open').length;
+          const mitige  = RISKS.filter(r=>r.statut==='mitigé').length;
+          const clos    = RISKS.filter(r=>r.statut==='clos').length;
+          const critical= RISKS.filter(r=>riskScore(r.probabilite,r.impact)>=12).length;
+          $('#risk-kpi-bar').html([
+            {l:'Total',     v:total,    c:'var(--accent)',  bg:'var(--accent-bg)'},
+            {l:'Ouverts',   v:open,     c:'var(--orange)',  bg:'var(--orange-bg)'},
+            {l:'Mitigés',   v:mitige,   c:'var(--yellow)',  bg:'var(--yellow-bg)'},
+            {l:'Clos',      v:clos,     c:'var(--green)',   bg:'var(--green-bg)'},
+            {l:'Critiques', v:critical, c:'var(--red)',     bg:'var(--red-bg)'},
+          ].map(k=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow);">
+            <div style="width:32px;height:32px;border-radius:7px;background:${k.bg};display:grid;place-items:center;font-size:18px;font-weight:800;color:${k.c};font-family:var(--mono);flex-shrink:0;">${k.v}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${k.l}</div>
+          </div>`).join(''));
 
-    const resCounts = {}, resRisks = {};
-    RISKS.forEach(r=>{
-      const sr  = riskScoreResiduel(r);
+          // ── Risk Control Matrix — double couche : Inhérent + Résiduel (COSO) ──
+          const PROBS   = ['critical','high','medium','low'];
+          const IMPACTS = ['low','medium','high','critical'];
+          const PLABELS = {low:'Faible',medium:'Moyen',high:'Élevé',critical:'Critique'};
+          const SCORE_TO_CELL = s => {
 
-      const cell = SCORE_TO_CELL(sr);
-      if(!cell) return;
-      const rp = PROBS[cell.pi], rim = IMPACTS[cell.ii];
-      const k2 = rp+'|'+rim;
-      resCounts[k2] = (resCounts[k2]||0)+1;
-      if(!resRisks[k2]) resRisks[k2]=[];
-      resRisks[k2].push({...r, _sr:sr});
-    });
+            const RANK = {low:0,medium:1,high:2,critical:3};
+            let best = null, bestDiff = 99;
+            PROBS.forEach((p,pi)=> IMPACTS.forEach((im,ii)=>{
+              const diff = Math.abs(riskScore(p,im)-s);
+              if(diff < bestDiff){ bestDiff=diff; best={pi,ii}; }
+            }));
+            return best;
+          };
 
-    const cellW = 60, cellH = 48, padL = 56, padB = 32;
-    const matW = padL + cellW*4 + 2;
-    const matH = padB + cellH*4 + 2;
+          const resCounts = {}, resRisks = {};
+          RISKS.forEach(r=>{
+            const sr  = riskScoreResiduel(r);
 
-    let svg = `<svg width="${matW}" height="${matH}" style="display:block;width:100%;" viewBox="0 0 ${matW} ${matH}">`;
+            const cell = SCORE_TO_CELL(sr);
+            if(!cell) return;
+            const rp = PROBS[cell.pi], rim = IMPACTS[cell.ii];
+            const k2 = rp+'|'+rim;
+            resCounts[k2] = (resCounts[k2]||0)+1;
+            if(!resRisks[k2]) resRisks[k2]=[];
+            resRisks[k2].push({...r, _sr:sr});
+          });
 
-    svg += `<text x="10" y="${padB+cellH*2}" text-anchor="middle" font-size="9" fill="var(--text-muted)" transform="rotate(-90,10,${padB+cellH*2})">Probabilité</text>`;
-    svg += `<text x="${padL+cellW*2}" y="${matH-2}" text-anchor="middle" font-size="9" fill="var(--text-muted)">Impact</text>`;
-    PROBS.forEach((p,pi)=>{
-      svg += `<text x="${padL-4}" y="${padB+pi*cellH+cellH/2+1}" text-anchor="end" font-size="8" fill="var(--text-muted)" dominant-baseline="middle">${PLABELS[p]}</text>`;
-    });
-    IMPACTS.forEach((im,ii)=>{
-      svg += `<text x="${padL+ii*cellW+cellW/2}" y="${padB-6}" text-anchor="middle" font-size="8" fill="var(--text-muted)">${PLABELS[im]}</text>`;
-    });
+          const cellW = 60, cellH = 48, padL = 56, padB = 32;
+          const matW = padL + cellW*4 + 2;
+          const matH = padB + cellH*4 + 2;
 
-    PROBS.forEach((p,pi)=>{
-      IMPACTS.forEach((im,ii)=>{
-        const x=padL+ii*cellW, y=padB+pi*cellH;
-        const col = matrixCellColor(p,im);
-        svg += `<rect x="${x+1}" y="${y+1}" width="${cellW-2}" height="${cellH-2}" rx="3" fill="${col}22" stroke="${col}33" stroke-width="1"/>`;
-      });
-    });
+          let svg = `<svg width="${matW}" height="${matH}" style="display:block;width:100%;" viewBox="0 0 ${matW} ${matH}">`;
 
-    const resCounts2 = {}, resRisks2 = {};
-    RISKS.forEach(r=>{
-      const si = riskScore(r.probabilite, r.impact);
-      const sr = riskScoreResiduel(r);
-      if(sr === si) return;
-      const cell = SCORE_TO_CELL(sr);
-      if(!cell) return;
-      const rp = PROBS[cell.pi], rim = IMPACTS[cell.ii];
-      const k2 = rp+'|'+rim;
-      resCounts2[k2] = (resCounts2[k2]||0)+1;
-      if(!resRisks2[k2]) resRisks2[k2]=[];
-      resRisks2[k2].push({...r, _sr:sr});
-    });
+          svg += `<text x="10" y="${padB+cellH*2}" text-anchor="middle" font-size="9" fill="var(--text-muted)" transform="rotate(-90,10,${padB+cellH*2})">Probabilité</text>`;
+          svg += `<text x="${padL+cellW*2}" y="${matH-2}" text-anchor="middle" font-size="9" fill="var(--text-muted)">Impact</text>`;
+          PROBS.forEach((p,pi)=>{
+            svg += `<text x="${padL-4}" y="${padB+pi*cellH+cellH/2+1}" text-anchor="end" font-size="8" fill="var(--text-muted)" dominant-baseline="middle">${PLABELS[p]}</text>`;
+          });
+          IMPACTS.forEach((im,ii)=>{
+            svg += `<text x="${padL+ii*cellW+cellW/2}" y="${padB-6}" text-anchor="middle" font-size="8" fill="var(--text-muted)">${PLABELS[im]}</text>`;
+          });
 
-    PROBS.forEach((p,pi)=>{
-      IMPACTS.forEach((im,ii)=>{
-        const k=p+'|'+im;
-        const n=resCounts2[k]||0;
-        if(!n) return;
-        const x=padL+ii*cellW, y=padB+pi*cellH;
-        const col=matrixCellColor(p,im);
-        const tooltip=(resRisks2[k]||[]).map(r=>r.id+' '+r.titre+' (résiduel:'+r._sr+')').join('\n');
-        svg += `<rect x="${x+cellW/2+1}" y="${y+cellH/2-11}" width="22" height="22" rx="3" fill="${col}99" stroke="${col}cc" stroke-width="1.5"/>`;
-        svg += `<text x="${x+cellW/2+12}" y="${y+cellH/2}" text-anchor="middle" dominant-baseline="middle" font-size="${n>9?8:10}" font-weight="800" fill="#fff">${n}</text>`;
-        svg += `<title>Résiduel COSO: ${tooltip}</title>`;
-      });
-    });
+          PROBS.forEach((p,pi)=>{
+            IMPACTS.forEach((im,ii)=>{
+              const x=padL+ii*cellW, y=padB+pi*cellH;
+              const col = matrixCellColor(p,im);
+              svg += `<rect x="${x+1}" y="${y+1}" width="${cellW-2}" height="${cellH-2}" rx="3" fill="${col}22" stroke="${col}33" stroke-width="1"/>`;
+            });
+          });
 
-    RISKS.forEach(r=>{
-      const sr = riskScoreResiduel(r);
-      if(sr === riskScore(r.probabilite, r.impact)) return;
-      const pi1 = PROBS.indexOf(r.probabilite), ii1 = IMPACTS.indexOf(r.impact);
-      const rc   = SCORE_TO_CELL(sr);
-      if(!rc || (rc.pi===pi1 && rc.ii===ii1)) return;
-      const x1=padL+ii1*cellW+cellW/2-8, y1=padB+pi1*cellH+cellH/2;
-      const x2=padL+rc.ii*cellW+cellW/2+12, y2=padB+rc.pi*cellH+cellH/2;
-      svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#6366f1" stroke-width="1.2" stroke-dasharray="3,2" marker-end="url(#arr)" opacity=".7"/>`;
-    });
+          const resCounts2 = {}, resRisks2 = {};
+          RISKS.forEach(r=>{
+            const si = riskScore(r.probabilite, r.impact);
+            const sr = riskScoreResiduel(r);
+            if(sr === si) return;
+            const cell = SCORE_TO_CELL(sr);
+            if(!cell) return;
+            const rp = PROBS[cell.pi], rim = IMPACTS[cell.ii];
+            const k2 = rp+'|'+rim;
+            resCounts2[k2] = (resCounts2[k2]||0)+1;
+            if(!resRisks2[k2]) resRisks2[k2]=[];
+            resRisks2[k2].push({...r, _sr:sr});
+          });
 
-    svg = svg.replace('<svg ', `<svg `) + '';
-    svg = `<svg width="${matW}" height="${matH}" style="display:block;width:100%;" viewBox="0 0 ${matW} ${matH}">
-      <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6366f1" opacity=".8"/></marker></defs>` +
-      svg.replace(`<svg width="${matW}" height="${matH}" style="display:block;width:100%;" viewBox="0 0 ${matW} ${matH}">`, '');
+          PROBS.forEach((p,pi)=>{
+            IMPACTS.forEach((im,ii)=>{
+              const k=p+'|'+im;
+              const n=resCounts2[k]||0;
+              if(!n) return;
+              const x=padL+ii*cellW, y=padB+pi*cellH;
+              const col=matrixCellColor(p,im);
+              const tooltip=(resRisks2[k]||[]).map(r=>r.id+' '+r.titre+' (résiduel:'+r._sr+')').join('\n');
+              svg += `<rect x="${x+cellW/2+1}" y="${y+cellH/2-11}" width="22" height="22" rx="3" fill="${col}99" stroke="${col}cc" stroke-width="1.5"/>`;
+              svg += `<text x="${x+cellW/2+12}" y="${y+cellH/2}" text-anchor="middle" dominant-baseline="middle" font-size="${n>9?8:10}" font-weight="800" fill="#fff">${n}</text>`;
+              svg += `<title>Résiduel COSO: ${tooltip}</title>`;
+            });
+          });
 
-    svg += `</svg>`;
-    $('#risk-matrix-wrap').html(svg);
+          RISKS.forEach(r=>{
+            const sr = riskScoreResiduel(r);
+            if(sr === riskScore(r.probabilite, r.impact)) return;
+            const pi1 = PROBS.indexOf(r.probabilite), ii1 = IMPACTS.indexOf(r.impact);
+            const rc   = SCORE_TO_CELL(sr);
+            if(!rc || (rc.pi===pi1 && rc.ii===ii1)) return;
+            const x1=padL+ii1*cellW+cellW/2-8, y1=padB+pi1*cellH+cellH/2;
+            const x2=padL+rc.ii*cellW+cellW/2+12, y2=padB+rc.pi*cellH+cellH/2;
+            svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#6366f1" stroke-width="1.2" stroke-dasharray="3,2" marker-end="url(#arr)" opacity=".7"/>`;
+          });
 
-    $('#risk-matrix-legend').html([
-      {c:'#22c55e', l:'Faible (1–2)'},
-      {c:'#eab308', l:'Modéré (3–4)'},
-      {c:'#f59e0b', l:'Élevé (6–9)'},
-      {c:'#ef4444', l:'Critique (12–16)'},
-      {c:'#6366f1', l:'▪ Résiduel COSO'},
-    ].map(x=>`<span style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--text-muted);">
-      <i style="width:10px;height:10px;background:${x.c};border-radius:${x.c==='#6366f1'?'1':'2'}px;display:inline-block;opacity:.85;"></i>${x.l}
-    </span>`).join(''));
+          svg = svg.replace('<svg ', `<svg `) + '';
+          svg = `<svg width="${matW}" height="${matH}" style="display:block;width:100%;" viewBox="0 0 ${matW} ${matH}">
+            <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#6366f1" opacity=".8"/></marker></defs>` +
+            svg.replace(`<svg width="${matW}" height="${matH}" style="display:block;width:100%;" viewBox="0 0 ${matW} ${matH}">`, '');
 
-    // Table
-    const $tb = $('#risk-tbody').empty();
-    if(!rows.length){
-      $('#risk-table').hide();
-      $('#risk-empty').show();
-      return;
+          svg += `</svg>`;
+          $('#risk-matrix-wrap').html(svg);
+
+          $('#risk-matrix-legend').html([
+            {c:'#22c55e', l:'Faible (1–2)'},
+            {c:'#eab308', l:'Modéré (3–4)'},
+            {c:'#f59e0b', l:'Élevé (6–9)'},
+            {c:'#ef4444', l:'Critique (12–16)'},
+            {c:'#6366f1', l:'▪ Résiduel COSO'},
+          ].map(x=>`<span style="display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--text-muted);">
+            <i style="width:10px;height:10px;background:${x.c};border-radius:${x.c==='#6366f1'?'1':'2'}px;display:inline-block;opacity:.85;"></i>${x.l}
+          </span>`).join(''));
+
+          // Table
+          const $tb = $('#risk-tbody').empty();
+          if(!rows.length){
+            $('#risk-table').hide();
+            $('#risk-empty').show();
+            return;
+          }
+          $('#risk-table').show();
+          $('#risk-empty').hide();
+
+          rows.forEach((r,i)=>{
+            const si  = riskScore(r.probabilite, r.impact);
+            const sr  = riskScoreResiduel(r);
+            const linh = scoreToLevel(si);
+            const lres = scoreToLevel(sr);
+            const prc = RISK_COLORS[r.probabilite]||RISK_COLORS.low;
+            const irc = RISK_COLORS[r.impact]||RISK_COLORS.low;
+            const stc = {open:{c:'var(--orange)',bg:'var(--orange-bg)',l:'Ouvert'},
+                        'mitigé':{c:'var(--yellow)',bg:'var(--yellow-bg)',l:'Mitigé'},
+                        clos:{c:'var(--green)',bg:'var(--green-bg)',l:'Clos'}}[r.statut]
+                        ||{c:'var(--text-muted)',bg:'var(--surface3)',l:r.statut};
+
+            const cosoDone = COSO_COMPONENTS.filter(c=>parseInt(r['coso_'+c.key])>0).length;
+            const cosoIcon = cosoDone===5 ? '●●●●●' : cosoDone>0 ? '●'.repeat(cosoDone)+'○'.repeat(5-cosoDone) : '○○○○○';
+            const cosoCol  = cosoDone===5?'var(--green)':cosoDone>0?'var(--yellow)':'var(--text-dim)';
+            const ctrlLbl  = CTRL_TYPES.find(t=>t.v===r.ctrl_type)?.l||'—';
+            const mitigateStratLabels = {reduce:'Réduire',transfer:'Transférer',avoid:'Éviter',accept:'Accepter'};
+            const mitigateStratColors = {reduce:'var(--green)',transfer:'var(--accent)',avoid:'var(--orange)',accept:'var(--text-muted)'};
+            const mitStratLbl = r.mitigate_strategy ? (mitigateStratLabels[r.mitigate_strategy]||r.mitigate_strategy) : '—';
+            const mitStratCol = r.mitigate_strategy ? (mitigateStratColors[r.mitigate_strategy]||'var(--text-muted)') : 'var(--text-dim)';
+            const idx = RISKS.indexOf(r);
+
+            $tb.append(`<tr>
+              <td style="font-family:var(--mono);font-size:10px;color:var(--accent);">${r.id||'—'}</td>
+              <td style="font-weight:500;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.titre||''}">${r.titre||'—'}</td>
+              <td style="font-size:10px;color:var(--text-muted);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.societe||''}">${r.societe||'—'}</td>
+              <td><span style="font-size:9px;background:var(--surface3);padding:1px 5px;border-radius:3px;">${r.categorie||'—'}</span></td>
+              <td class="t-center"><span style="font-size:9px;font-weight:600;color:${prc.c};background:${prc.bg};padding:1px 5px;border-radius:3px;">${RISK_LEVEL_LABELS[r.probabilite]||'—'}</span></td>
+              <td class="t-center"><span style="font-size:9px;font-weight:600;color:${irc.c};background:${irc.bg};padding:1px 5px;border-radius:3px;">${RISK_LEVEL_LABELS[r.impact]||'—'}</span></td>
+              <td class="t-center">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                  <span style="font-size:11px;font-weight:800;color:${linh.c};font-family:var(--mono);" title="Score inhérent">${si}</span>
+                  <span style="font-size:9px;font-weight:700;color:${lres.c};font-family:var(--mono);opacity:.9;" title="Score résiduel (après contrôle)">▸${sr}</span>
+                </div>
+              </td>
+              <td class="t-center">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+                  <span style="font-size:9px;font-weight:600;color:${mitStratCol};">${mitStratLbl}</span>
+                  <span style="font-size:8.5px;color:var(--text-dim);">${ctrlLbl}</span>
+                  <span style="font-size:9px;letter-spacing:-1px;color:${cosoCol};" title="COSO ${cosoDone}/5 composantes renseignées">${cosoIcon}</span>
+                </div>
+              </td>
+              <td class="t-center"><span style="font-size:9px;font-weight:600;color:${stc.c};background:${stc.bg};padding:1px 5px;border-radius:3px;">${stc.l}</span></td>
+              <td style="font-size:10px;">
+                ${r.mitigate_plan ? `<span style="display:block;max-width:85px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted);" title="${r.mitigate_plan}">${r.mitigate_plan}</span>` : '<span style="color:var(--text-dim);">—</span>'}
+                ${r.mitigate_deadline ? `<span style="font-size:9px;color:var(--text-dim);font-family:var(--mono);">${r.mitigate_deadline}</span>` : ''}
+              </td>
+              <td style="font-size:10px;color:var(--text-muted);">${r.responsable||'—'}</td>
+              <td style="font-size:10px;color:var(--text-muted);font-family:var(--mono);">${r.echeance||'—'}</td>
+              <td>
+                <button class="tbtn" data-risk-edit="${idx}" style="font-size:10px;padding:1px 6px;">✏</button>
+                <button class="tbtn" data-risk-del="${idx}"  style="font-size:10px;padding:1px 6px;color:var(--red);margin-left:2px;">✕</button>
+              </td>
+            </tr>`);
+          });
+        }catch(e){}
+      } else {
+          console.log(response.message);
+      }
+    },
+
+    error: function(xhr) {
+        console.log("Erreur AJAX :", xhr.responseText);
     }
-    $('#risk-table').show();
-    $('#risk-empty').hide();
-
-    rows.forEach((r,i)=>{
-      const si  = riskScore(r.probabilite, r.impact);
-      const sr  = riskScoreResiduel(r);
-      const linh = scoreToLevel(si);
-      const lres = scoreToLevel(sr);
-      const prc = RISK_COLORS[r.probabilite]||RISK_COLORS.low;
-      const irc = RISK_COLORS[r.impact]||RISK_COLORS.low;
-      const stc = {open:{c:'var(--orange)',bg:'var(--orange-bg)',l:'Ouvert'},
-                   'mitigé':{c:'var(--yellow)',bg:'var(--yellow-bg)',l:'Mitigé'},
-                   clos:{c:'var(--green)',bg:'var(--green-bg)',l:'Clos'}}[r.statut]
-                  ||{c:'var(--text-muted)',bg:'var(--surface3)',l:r.statut};
-
-      const cosoDone = COSO_COMPONENTS.filter(c=>parseInt(r['coso_'+c.key])>0).length;
-      const cosoIcon = cosoDone===5 ? '●●●●●' : cosoDone>0 ? '●'.repeat(cosoDone)+'○'.repeat(5-cosoDone) : '○○○○○';
-      const cosoCol  = cosoDone===5?'var(--green)':cosoDone>0?'var(--yellow)':'var(--text-dim)';
-      const ctrlLbl  = CTRL_TYPES.find(t=>t.v===r.ctrl_type)?.l||'—';
-      const mitigateStratLabels = {reduce:'Réduire',transfer:'Transférer',avoid:'Éviter',accept:'Accepter'};
-      const mitigateStratColors = {reduce:'var(--green)',transfer:'var(--accent)',avoid:'var(--orange)',accept:'var(--text-muted)'};
-      const mitStratLbl = r.mitigate_strategy ? (mitigateStratLabels[r.mitigate_strategy]||r.mitigate_strategy) : '—';
-      const mitStratCol = r.mitigate_strategy ? (mitigateStratColors[r.mitigate_strategy]||'var(--text-muted)') : 'var(--text-dim)';
-      const idx = RISKS.indexOf(r);
-      $tb.append(`<tr>
-        <td style="font-family:var(--mono);font-size:10px;color:var(--accent);">${r.id||'—'}</td>
-        <td style="font-weight:500;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.titre||''}">${r.titre||'—'}</td>
-        <td style="font-size:10px;color:var(--text-muted);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.societe||''}">${r.societe||'—'}</td>
-        <td><span style="font-size:9px;background:var(--surface3);padding:1px 5px;border-radius:3px;">${r.categorie||'—'}</span></td>
-        <td class="t-center"><span style="font-size:9px;font-weight:600;color:${prc.c};background:${prc.bg};padding:1px 5px;border-radius:3px;">${RISK_LEVEL_LABELS[r.probabilite]||'—'}</span></td>
-        <td class="t-center"><span style="font-size:9px;font-weight:600;color:${irc.c};background:${irc.bg};padding:1px 5px;border-radius:3px;">${RISK_LEVEL_LABELS[r.impact]||'—'}</span></td>
-        <td class="t-center">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-            <span style="font-size:11px;font-weight:800;color:${linh.c};font-family:var(--mono);" title="Score inhérent">${si}</span>
-            <span style="font-size:9px;font-weight:700;color:${lres.c};font-family:var(--mono);opacity:.9;" title="Score résiduel (après contrôle)">▸${sr}</span>
-          </div>
-        </td>
-        <td class="t-center">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
-            <span style="font-size:9px;font-weight:600;color:${mitStratCol};">${mitStratLbl}</span>
-            <span style="font-size:8.5px;color:var(--text-dim);">${ctrlLbl}</span>
-            <span style="font-size:9px;letter-spacing:-1px;color:${cosoCol};" title="COSO ${cosoDone}/5 composantes renseignées">${cosoIcon}</span>
-          </div>
-        </td>
-        <td class="t-center"><span style="font-size:9px;font-weight:600;color:${stc.c};background:${stc.bg};padding:1px 5px;border-radius:3px;">${stc.l}</span></td>
-        <td style="font-size:10px;">
-          ${r.mitigate_plan ? `<span style="display:block;max-width:85px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted);" title="${r.mitigate_plan}">${r.mitigate_plan}</span>` : '<span style="color:var(--text-dim);">—</span>'}
-          ${r.mitigate_deadline ? `<span style="font-size:9px;color:var(--text-dim);font-family:var(--mono);">${r.mitigate_deadline}</span>` : ''}
-        </td>
-        <td style="font-size:10px;color:var(--text-muted);">${r.responsable||'—'}</td>
-        <td style="font-size:10px;color:var(--text-muted);font-family:var(--mono);">${r.echeance||'—'}</td>
-        <td>
-          <button class="tbtn" data-risk-edit="${idx}" style="font-size:10px;padding:1px 6px;">✏</button>
-          <button class="tbtn" data-risk-del="${idx}"  style="font-size:10px;padding:1px 6px;color:var(--red);margin-left:2px;">✕</button>
-        </td>
-      </tr>`);
-    });
-  }catch(e){}
+  });
 }
 
 function openRiskModal(title, risk){
@@ -10498,7 +10634,7 @@ function openRiskModal(title, risk){
   <div style="background:var(--accent-bg);border:1px solid #b3d0f7;border-radius:5px;padding:10px 13px;margin-bottom:12px;">
     <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">📋 Identification du risque</div>
     <div class="fgrid">
-      <div class="frow2"><div class="flbl2">ID</div>
+      <div class="frow2" style="display:none"><div class="flbl2">ID</div>
         <input class="finp" id="rf-id" value="${isEdit?risk.id||'':''}" placeholder="R-001"></div>
       <div class="frow2"><div class="flbl2">Société</div>
         <select class="finp" id="rf-societe"><option value="">—</option>
@@ -10673,9 +10809,8 @@ function openRiskModal(title, risk){
 
     const cosoData = {};
     COSO_COMPONENTS.forEach(c=>{ cosoData['coso_'+c.key] = notes[c.key]||0; });
-
-    const obj = {
-      id:               $('#rf-id').val().trim() || ('R-'+(RISKS.length+1).toString().padStart(3,'0')),
+    const data = {
+      action:'ajouter',
       titre,
       societe:          $('#rf-societe').val(),
       categorie:        $('#rf-categorie').val(),
@@ -10695,22 +10830,84 @@ function openRiskModal(title, risk){
       description:      $('#rf-desc').val().trim(),
       ...cosoData,
     };
-    if(isEdit){
-      Object.assign(risk, obj);
-    } else {
 
-      const existingIdx = RISKS.findIndex(r => r.id === obj.id);
-      if(existingIdx >= 0){
-        Object.assign(RISKS[existingIdx], obj);
-      } else {
-        RISKS.push(obj);
-      }
+    if(isEdit){
+    
+      const data_modifier_risque = {
+        action:'modifier',
+        id:editrisque,
+        titre,
+        societe:          $('#rf-societe').val(),
+        categorie:        $('#rf-categorie').val(),
+        statut:           $('#rf-statut').val(),
+        probabilite:      $('#rf-probabilite').val(),
+        impact:           $('#rf-impact').val(),
+        score:            si,
+        score_residuel:   sr,
+        ctrl_type:        $('#rf-ctrl-type').val(),
+        ctrl_description: $('#rf-ctrl-desc').val().trim(),
+        mitigate_strategy:  $('#rf-mitigate-strategy').val(),
+        mitigate_plan:      $('#rf-mitigate-plan').val().trim(),
+        mitigate_deadline:  $('#rf-mitigate-deadline').val(),
+        mitigate_owner:     $('#rf-mitigate-owner').val().trim(),
+        responsable:      $('#rf-responsable').val().trim(),
+        echeance:         $('#rf-echeance').val(),
+        description:      $('#rf-desc').val().trim(),
+        ...cosoData,
+      };
+
+      $.ajax({
+        url: "/DAC/php/risque/actions.php",
+        type: "POST",
+        data: data_modifier_risque,
+        dataType: "json",
+
+        success: function(response){
+            console.log(response);
+            delete window._risksaveHandler;
+            closeModal();
+            renderRisks();
+            dbSave();
+            toast('success','✓','Risque mis à jour');
+        },
+
+        error:function(xhr,status,error){
+
+            console.log("Status :",status);
+            console.log("Erreur :",error);
+            console.log("Réponse :",xhr.responseText);
+
+            alert("Erreur serveur : "+xhr.status);
+
+        }
+      });
+    } else {
+      $.ajax({
+        url: "/DAC/php/risque/actions.php",
+        type: "POST",
+        data: data,
+        dataType: "json",
+
+        success: function(response){
+            console.log(response);
+            delete window._risksaveHandler;
+            closeModal();
+            renderRisks();
+            dbSave();
+            toast('success','✓', isEdit ? 'Risque mis à jour' : 'Risque créé');
+        },
+
+        error:function(xhr,status,error){
+
+            console.log("Status :",status);
+            console.log("Erreur :",error);
+            console.log("Réponse :",xhr.responseText);
+
+            alert("Erreur serveur : "+xhr.status);
+
+        }
+      });
     }
-    delete window._risksaveHandler;
-    closeModal();
-    renderRisks();
-    dbSave();
-    toast('success','✓', isEdit ? 'Risque mis à jour' : 'Risque créé');
   };
 }
 
@@ -10718,15 +10915,49 @@ $(document).on('click','#risk-add-btn', ()=>openRiskModal('Nouveau risque', null
 $(document).on('click','[data-risk-edit]', function(){
   const i = parseInt($(this).data('risk-edit'));
   if(RISKS[i]) openRiskModal('Modifier le risque', RISKS[i]);
+  editrisque=RISKS[i].id;
 });
 $(document).on('click','[data-risk-del]', function(){
-  const i = parseInt($(this).data('risk-del'));
-  if(!RISKS[i]) return;
+  
   if(!confirm('Supprimer ce risque ?')) return;
-  RISKS.splice(i,1);
-  renderRisks();
-  dbSave();
-  toast('success','✓','Risque supprimé');
+    const i = parseInt($(this).data('risk-del'));
+
+    const dataDeleterisque = {
+        action: 'supprimer',
+        id: RISKS[i].id
+    };
+    
+    $.ajax({
+      url: "/DAC/php/risque/actions.php",
+      type: "POST",
+      data: dataDeleterisque,
+      dataType: "json",
+
+      success: function(response){
+
+          console.log(response);
+
+          if(response.success){  
+            renderRisks();
+            toast('success','✓','Risque supprimé');
+          }else{
+
+              toast('error','Erreur',response.message);
+          }
+      },
+
+
+      error:function(xhr,status,error){
+
+          console.log("Status :",status);
+          console.log("Erreur :",error);
+          console.log("Réponse :",xhr.responseText);
+
+          alert("Erreur serveur : "+xhr.status);
+
+          $('#soc-save-btn').prop('disabled', false);
+      }
+  });
 });
 $(document).on('change','#risk-f-statut,#risk-f-cat,#risk-f-soc', ()=>renderRisks());
 
@@ -18911,8 +19142,10 @@ showView('overview');
 /* ═══════════════════════════════════════════════════════════
    TRAVAIL À FAIRE (TAF) — Données, rendu, CRUD, Configuration
    ═══════════════════════════════════════════════════════════ */
+  var TAF_DEFAULT = [];
 
-var TAF_DEFAULT = [
+
+/*var TAF_DEFAULT = [
   {id:'TRS-ENC-01',categorie:'Encaissement',titre:"Vérifier que chaque encaissement est identifiable et rattaché à une créance",programme:"- Sélectionner un échantillon d'encaissements\n- Vérifier correspondance avec facture/client\n- Tester piste d'audit dans le système\n- Vérifier unicité référence",docs:"Factures, reçus, journal de caisse, grand livre clients",contact:"Caissier, Comptable",timing:"Quotidien / test sur période",testplan:"Échantillon de 20 opérations",testresults:"OK",priorite:"high",statut:"todo",auditeur:"",notes:"Anomalies de référence"},
   {id:'TRS-ENC-02',categorie:'Encaissement',titre:"Vérifier fiabilité des encaissements et authenticité des fonds",programme:"- Observation terrain (walkthrough)\n- Vérifier équipement détection\n- Refaire comptage caisse\n- Tester rapprochement dû vs encaissé",docs:"Procédures, journal caisse, rapport caisse",contact:"Caissier",timing:"Inopiné",testplan:"10 sessions caisse",testresults:"",priorite:"high",statut:"todo",auditeur:"",notes:"Faiblesse formation"},
   {id:'TRS-ENC-03',categorie:'Encaissement',titre:"Vérifier exactitude imputation pour garantir fiabilité financière",programme:"- Tester lettrage comptable\n- Vérifier lien paiement/facture\n- Identifier écarts\n- Revue écritures manuelles",docs:"Balance âgée, GL clients, reçus",contact:"Comptable",timing:"Mensuel",testplan:"25 écritures",testresults:"",priorite:"critical",statut:"todo",auditeur:"",notes:"Risque élevé"},
@@ -18941,7 +19174,7 @@ var TAF_DEFAULT = [
   {id:'TRS-COMPTA-03',categorie:'Comptabilité',titre:"Vérifier fiabilité des écritures migrées",programme:"- Réconciliation avant/après\n- Vérifier pièces\n- Tester échantillon\n- Analyse logs",docs:"GL, balance, pièces",contact:"Comptable / IT",timing:"Projet",testplan:"30 écritures",testresults:"",priorite:"critical",statut:"todo",auditeur:"",notes:"RISQUE MAJEUR"},
   {id:'TRS-COMPTA-04',categorie:'Comptabilité',titre:"Vérifier cohérence globale",programme:"- Rapprochement périodique\n- Analyse écarts\n- Validation correction",docs:"GL, balance",contact:"Comptable",timing:"Mensuel",testplan:"12 mois",testresults:"",priorite:"medium",statut:"todo",auditeur:"",notes:"Fiabilité"},
   {id:'TRS-COMPTA-05',categorie:'Comptabilité',titre:"Vérifier conservation documents",programme:"- Vérifier archivage physique + digital\n- Tester sauvegarde\n- Contrôle accès",docs:"Archives",contact:"IT + compta",timing:"Permanent",testplan:"10 tests",testresults:"",priorite:"medium",statut:"todo",auditeur:"",notes:"Risque fiscal"}
-];
+];*/
 
 var TAF_ITEMS = [];
 function tafLoad(){
@@ -18976,74 +19209,96 @@ var _tafSort={col:'id',dir:1};
 var _tafFilterStatut='',_tafFilterPriorite='',_tafFilterCategorie='',_tafFilterSociete='',_tafFilterAuditRef='',_tafSearch='';
 
 function renderTAF(){
-  var items=TAF_ITEMS.slice();
-  var cats=tafCategories();
-  var chipsHtml=cats.map(function(c){
-    var active=_tafFilterCategorie===c?' active':'';
-    var cnt=TAF_ITEMS.filter(function(t){return t.categorie===c;}).length;
-    return '<span class="chip'+active+'" data-cat="'+c+'">'+c+' <span style="font-size:9px;opacity:.7">'+cnt+'</span></span>';
-  }).join('');
-  $('#taf-chips').html(chipsHtml);
-  $('#taf-filter-categorie').html('<option value="">Toutes catégories</option>'+cats.map(function(c){return '<option value="'+c+'"'+(c===_tafFilterCategorie?' selected':'')+'>'+c+'</option>';}).join(''));
+  $.ajax({
+    url: "/DAC/php/taf/actions.php",
+    type: "POST",
+    dataType: "json",
+    data: {
+        action: "lister"
+    },
 
-  // Peupler filtre Sociétés (union des sociétés déjà présentes dans les TAF)
-  var socs=[];
-  TAF_ITEMS.forEach(function(t){ if(t.societe && socs.indexOf(t.societe)<0) socs.push(t.societe); });
-  socs.sort();
-  $('#taf-filter-societe').html('<option value="">Toutes sociétés</option>'+socs.map(function(s){return '<option value="'+escHtml(s)+'"'+(s===_tafFilterSociete?' selected':'')+'>'+escHtml(s)+'</option>';}).join(''));
+    success: function(response) {
+        if (response.success) {
+          ////console.log(response.data);
+          TAF_ITEMS=response.data;
+          var items=TAF_ITEMS.slice();
+          var cats=tafCategories();
+          var chipsHtml=cats.map(function(c){
+            var active=_tafFilterCategorie===c?' active':'';
+            var cnt=TAF_ITEMS.filter(function(t){return t.categorie===c;}).length;
+            return '<span class="chip'+active+'" data-cat="'+c+'">'+c+' <span style="font-size:9px;opacity:.7">'+cnt+'</span></span>';
+          }).join('');
+          $('#taf-chips').html(chipsHtml);
+          $('#taf-filter-categorie').html('<option value="">Toutes catégories</option>'+cats.map(function(c){return '<option value="'+c+'"'+(c===_tafFilterCategorie?' selected':'')+'>'+c+'</option>';}).join(''));
 
-  // Peupler filtre Références Plans d'audit (union des audit_refs liés aux TAF)
-  var auditRefs=[];
-  TAF_ITEMS.forEach(function(t){ (t.audit_refs||[]).forEach(function(r){ if(r && auditRefs.indexOf(r)<0) auditRefs.push(r); }); });
-  auditRefs.sort();
-  $('#taf-filter-audit-ref').html('<option value="">Toutes réf. Plans d\'audit</option>'+auditRefs.map(function(r){
-    var au=(typeof AUDITS!=='undefined'?AUDITS:[]).find(function(a){return a.ref===r;});
-    var lbl=r+(au&&au.title?' — '+au.title:'');
-    return '<option value="'+escHtml(r)+'"'+(r===_tafFilterAuditRef?' selected':'')+'>'+escHtml(lbl)+'</option>';
-  }).join(''));
+          // Peupler filtre Sociétés (union des sociétés déjà présentes dans les TAF)
+          var socs=[];
+          TAF_ITEMS.forEach(function(t){ if(t.societe && socs.indexOf(t.societe)<0) socs.push(t.societe); });
+          socs.sort();
+          $('#taf-filter-societe').html('<option value="">Toutes sociétés</option>'+socs.map(function(s){return '<option value="'+escHtml(s)+'"'+(s===_tafFilterSociete?' selected':'')+'>'+escHtml(s)+'</option>';}).join(''));
 
-  if(_tafSearch){var q=_tafSearch.toLowerCase();items=items.filter(function(t){return(t.id+t.titre+t.programme+t.contact+t.notes).toLowerCase().indexOf(q)>=0;});}
-  if(_tafFilterStatut)items=items.filter(function(t){return t.statut===_tafFilterStatut;});
-  if(_tafFilterPriorite)items=items.filter(function(t){return t.priorite===_tafFilterPriorite;});
-  if(_tafFilterCategorie)items=items.filter(function(t){return t.categorie===_tafFilterCategorie;});
-  if(_tafFilterSociete)items=items.filter(function(t){return t.societe===_tafFilterSociete;});
-  if(_tafFilterAuditRef)items=items.filter(function(t){return (t.audit_refs||[]).indexOf(_tafFilterAuditRef)>=0;});
-  items.sort(function(a,b){var av=(a[_tafSort.col]||'').toString().toLowerCase(),bv=(b[_tafSort.col]||'').toString().toLowerCase();return av<bv?-_tafSort.dir:av>bv?_tafSort.dir:0;});
-  $('#taf-count-badge').text(items.length);
-  if(!items.length){$('#taf-tbody').html('');$('#taf-empty').show();return;}
-  $('#taf-empty').hide();
-  var html=items.map(function(t){
-    var prioC=TAF_PRIO_CLASS[t.priorite]||'medium';
-    var statC=TAF_STAT_CLASS[t.statut]||'open';
-    var prog=(t.programme||'').replace(/\n/g,'<br>');
-    var _tafFrapCount=(typeof FRAP_DATA!=='undefined'?FRAP_DATA:[]).filter(function(f){return f.taf_ref===t.id;}).length;
-    return '<tr data-id="'+t.id+'">'
-      +'<td><span style="font-family:var(--mono);font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:3px;">'+t.id+'</span>'
-        +(t.rcm_ref?' <span style="cursor:pointer;color:#0a7d4b;font-size:10px;" title="Risque RCM lié : '+t.rcm_ref+' — cliquer pour ouvrir" onclick="event.stopPropagation();tafGoToRCM(\''+t.rcm_ref+'\')">🛡️</span>':'')
-        +((t.audit_refs&&t.audit_refs.length)?' <span style="font-size:9px;color:var(--accent);background:var(--accent-bg);padding:1px 5px;border-radius:3px;white-space:nowrap;" title="Mission(s) Plan d\'audit liée(s) : '+t.audit_refs.join(', ')+'">🔍 '+t.audit_refs.join(', ')+'</span>':'')
-        +(_tafFrapCount?' <span style="font-size:9px;color:var(--red);background:var(--red-bg);padding:1px 5px;border-radius:3px;white-space:nowrap;" title="'+_tafFrapCount+' constat(s) FRAP lié(s) — cliquer pour voir" onclick="event.stopPropagation();tafOpenModal(\''+t.id+'\')">📋 '+_tafFrapCount+'</span>':'')
-        +((t.societes_multi&&t.societes_multi.length)?' <span style="font-size:9px;color:var(--purple);background:var(--purple-bg);padding:1px 5px;border-radius:3px;white-space:nowrap;" title="Sociétés additionnelles : '+t.societes_multi.join(', ')+'">🏢 '+t.societes_multi.length+'</span>':'')
-        +((t.fiches_test&&t.fiches_test.length)?' <span style="cursor:pointer;color:var(--accent);font-size:10px;" title="'+t.fiches_test.length+' fichier(s) de test — cliquer pour ouvrir" onclick="event.stopPropagation();tafOpenModal(\''+t.id+'\')">📎'+t.fiches_test.length+'</span>':'')+'</td>'
-      +'<td style="max-width:220px;"><div style="max-height:54px;overflow:hidden;" title="'+t.titre.replace(/"/g,'&quot;')+'">'+t.titre+'</div></td>'
-      +'<td style="max-width:200px;"><div style="max-height:54px;overflow-y:auto;font-size:11px;color:var(--text-muted);">'+prog+'</div></td>'
-      +'<td style="font-size:11px;max-width:150px;">'+(t.docs||'—')+'</td>'
-      +'<td style="font-size:11px;">'+(t.contact||'—')+'</td>'
-      +'<td style="font-size:11px;white-space:nowrap;">'+(t.timing||'—')+'</td>'
-      +'<td style="font-size:11px;">'+(t.testplan||'—')+'</td>'
-      +'<td style="font-size:11px;white-space:nowrap;">'+(TAF_TR_LABELS[t.testresults]||'—')+'</td>'
-      +'<td><span class="badge '+prioC+'">'+(TAF_PRIO_LABELS[t.priorite]||t.priorite)+'</span></td>'
-      +'<td style="font-size:11px;">'+(t.auditeur||'—')+'</td>'
-      +'<td style="font-size:11px;max-width:120px;color:var(--text-muted);">'+(t.notes||'')+'</td>'
-      +'<td style="font-size:10px;color:var(--text-muted);white-space:nowrap;">'+(t.updated_at?'📅 '+t.updated_at:'—')+'</td>'
-      +'<td style="white-space:nowrap;">'
-        +'<span style="cursor:pointer;color:var(--accent);font-size:12px;margin-right:6px;" class="taf-edit-btn" data-id="'+t.id+'" title="Modifier">✏️</span>'
-        +'<span style="cursor:pointer;color:#6b21a8;font-size:12px;margin-right:6px;" class="taf-exec-btn" data-id="'+t.id+'" title="Exécuter — créer une FRAP (constat) à partir de ce TAF">▶️</span>'
-        +'<span style="cursor:pointer;color:var(--red);font-size:12px;" class="taf-del-btn" data-id="'+t.id+'" title="Supprimer">🗑️</span>'
-      +'</td>'
-    +'</tr>';
-  }).join('');
-  $('#taf-tbody').html(html);
-  updateTAFBadge();
+          // Peupler filtre Références Plans d'audit (union des audit_refs liés aux TAF)
+          var auditRefs=[];
+          TAF_ITEMS.forEach(function(t){ (t.audit_refs||[]).forEach(function(r){ if(r && auditRefs.indexOf(r)<0) auditRefs.push(r); }); });
+          auditRefs.sort();
+          $('#taf-filter-audit-ref').html('<option value="">Toutes réf. Plans d\'audit</option>'+auditRefs.map(function(r){
+            var au=(typeof AUDITS!=='undefined'?AUDITS:[]).find(function(a){return a.ref===r;});
+            var lbl=r+(au&&au.title?' — '+au.title:'');
+            return '<option value="'+escHtml(r)+'"'+(r===_tafFilterAuditRef?' selected':'')+'>'+escHtml(lbl)+'</option>';
+          }).join(''));
+
+          if(_tafSearch){var q=_tafSearch.toLowerCase();items=items.filter(function(t){return(t.id+t.titre+t.programme+t.contact+t.notes).toLowerCase().indexOf(q)>=0;});}
+          if(_tafFilterStatut)items=items.filter(function(t){return t.statut===_tafFilterStatut;});
+          if(_tafFilterPriorite)items=items.filter(function(t){return t.priorite===_tafFilterPriorite;});
+          if(_tafFilterCategorie)items=items.filter(function(t){return t.categorie===_tafFilterCategorie;});
+          if(_tafFilterSociete)items=items.filter(function(t){return t.societe===_tafFilterSociete;});
+          if(_tafFilterAuditRef)items=items.filter(function(t){return (t.audit_refs||[]).indexOf(_tafFilterAuditRef)>=0;});
+          items.sort(function(a,b){var av=(a[_tafSort.col]||'').toString().toLowerCase(),bv=(b[_tafSort.col]||'').toString().toLowerCase();return av<bv?-_tafSort.dir:av>bv?_tafSort.dir:0;});
+          $('#taf-count-badge').text(items.length);
+          if(!items.length){$('#taf-tbody').html('');$('#taf-empty').show();return;}
+          $('#taf-empty').hide();
+          var html=items.map(function(t){
+            var prioC=TAF_PRIO_CLASS[t.priorite]||'medium';
+            var statC=TAF_STAT_CLASS[t.statut]||'open';
+            var prog=(t.programme||'').replace(/\n/g,'<br>');
+            var _tafFrapCount=(typeof FRAP_DATA!=='undefined'?FRAP_DATA:[]).filter(function(f){return f.taf_ref===t.id;}).length;
+            return '<tr data-id="'+t.id+'">'
+              +'<td><span style="font-family:var(--mono);font-size:11px;background:var(--surface2);padding:2px 6px;border-radius:3px;">'+t.id+'</span>'
+                +(t.rcm_ref?' <span style="cursor:pointer;color:#0a7d4b;font-size:10px;" title="Risque RCM lié : '+t.rcm_ref+' — cliquer pour ouvrir" onclick="event.stopPropagation();tafGoToRCM(\''+t.rcm_ref+'\')">🛡️</span>':'')
+                +((t.audit_refs&&t.audit_refs.length)?' <span style="font-size:9px;color:var(--accent);background:var(--accent-bg);padding:1px 5px;border-radius:3px;white-space:nowrap;" title="Mission(s) Plan d\'audit liée(s) : '+t.audit_refs.join(', ')+'">🔍 '+t.audit_refs.join(', ')+'</span>':'')
+                +(_tafFrapCount?' <span style="font-size:9px;color:var(--red);background:var(--red-bg);padding:1px 5px;border-radius:3px;white-space:nowrap;" title="'+_tafFrapCount+' constat(s) FRAP lié(s) — cliquer pour voir" onclick="event.stopPropagation();tafOpenModal(\''+t.id+'\')">📋 '+_tafFrapCount+'</span>':'')
+                +((t.societes_multi&&t.societes_multi.length)?' <span style="font-size:9px;color:var(--purple);background:var(--purple-bg);padding:1px 5px;border-radius:3px;white-space:nowrap;" title="Sociétés additionnelles : '+t.societes_multi.join(', ')+'">🏢 '+t.societes_multi.length+'</span>':'')
+                +((t.fiches_test&&t.fiches_test.length)?' <span style="cursor:pointer;color:var(--accent);font-size:10px;" title="'+t.fiches_test.length+' fichier(s) de test — cliquer pour ouvrir" onclick="event.stopPropagation();tafOpenModal(\''+t.id+'\')">📎'+t.fiches_test.length+'</span>':'')+'</td>'
+              +'<td style="max-width:220px;"><div style="max-height:54px;overflow:hidden;" title="'+t.titre.replace(/"/g,'&quot;')+'">'+t.titre+'</div></td>'
+              +'<td style="max-width:200px;"><div style="max-height:54px;overflow-y:auto;font-size:11px;color:var(--text-muted);">'+prog+'</div></td>'
+              +'<td style="font-size:11px;max-width:150px;">'+(t.docs||'—')+'</td>'
+              +'<td style="font-size:11px;">'+(t.contact||'—')+'</td>'
+              +'<td style="font-size:11px;white-space:nowrap;">'+(t.timing||'—')+'</td>'
+              +'<td style="font-size:11px;">'+(t.testplan||'—')+'</td>'
+              +'<td style="font-size:11px;white-space:nowrap;">'+(TAF_TR_LABELS[t.testresults]||'—')+'</td>'
+              +'<td><span class="badge '+prioC+'">'+(TAF_PRIO_LABELS[t.priorite]||t.priorite)+'</span></td>'
+              +'<td style="font-size:11px;">'+(t.auditeur||'—')+'</td>'
+              +'<td style="font-size:11px;max-width:120px;color:var(--text-muted);">'+(t.notes||'')+'</td>'
+              +'<td style="font-size:10px;color:var(--text-muted);white-space:nowrap;">'+(t.updated_at?'📅 '+t.updated_at:'—')+'</td>'
+              +'<td style="white-space:nowrap;">'
+                +'<span style="cursor:pointer;color:var(--accent);font-size:12px;margin-right:6px;" class="taf-edit-btn" data-id="'+t.id+'" title="Modifier">✏️</span>'
+                +'<span style="cursor:pointer;color:#6b21a8;font-size:12px;margin-right:6px;" class="taf-exec-btn" data-id="'+t.id+'" title="Exécuter — créer une FRAP (constat) à partir de ce TAF">▶️</span>'
+                +'<span style="cursor:pointer;color:var(--red);font-size:12px;" class="taf-del-btn" data-id="'+t.id+'" title="Supprimer">🗑️</span>'
+              +'</td>'
+            +'</tr>';
+          }).join('');
+          $('#taf-tbody').html(html);
+          updateTAFBadge();
+        } else {
+            console.log(response.message);
+        }
+    },
+
+    error: function(xhr) {
+        console.log("Erreur AJAX :", xhr.responseText);
+    }
+});
+
 }
 
 $(document).on('click','#taf-chips .chip',function(){
@@ -19069,7 +19324,7 @@ $(document).on('click','#taf-table th',function(){
 var TAF_FICHES_TEMP = [];
 var TAF_FICHE_MAX_SIZE = 4 * 1024 * 1024; // 4 Mo par fichier
 
-function tafRenderFichesList(){
+function tafRenderFichesList(){ 
   var box = document.getElementById('taf-fiches-list');
   if(!box) return;
   if(!TAF_FICHES_TEMP.length){
@@ -19079,6 +19334,7 @@ function tafRenderFichesList(){
   box.innerHTML = TAF_FICHES_TEMP.map(function(p){
     var isImg = /^image\//.test(p.type||'');
     var shortName = p.name && p.name.length > 15 ? p.name.slice(0,13)+'…' : (p.name||'Fichier');
+    //var fileUrl = 'fichiers/' + p.path; // <-- chemin réel : dossier + nom du fichier stocké
     return '<div class="taf-fiche-chip">'
       + '<span class="taf-fiche-rm" data-fpid="'+p.id+'" title="Retirer">×</span>'
       + (isImg
@@ -19090,36 +19346,52 @@ function tafRenderFichesList(){
   }).join('');
 }
 
-function tafHandleFiles(fileList){
-  var files = Array.prototype.slice.call(fileList || []);
-  if(!files.length) return;
-  files.forEach(function(file){
-    if(file.size > TAF_FICHE_MAX_SIZE){
-      toast('error','⚠️','"'+file.name+'" dépasse 4 Mo — ignoré.');
-      return;
-    }
-    var reader = new FileReader();
-    reader.onload = function(ev){
-      TAF_FICHES_TEMP.push({
-        id:      'ft_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
-        name:    file.name,
-        type:    file.type || '',
-        size:    file.size,
-        dataUrl: ev.target.result,
-        addedAt: new Date().toISOString().slice(0,10)
-      });
-      tafRenderFichesList();
-    };
-    reader.onerror = function(){
-      toast('error','⚠️','Lecture impossible pour "'+file.name+'".');
-    };
-    reader.readAsDataURL(file);
-  });
-}
 
 function tafRemoveFiche(id){
-  TAF_FICHES_TEMP = TAF_FICHES_TEMP.filter(function(p){ return p.id !== id; });
-  tafRenderFichesList();
+  $.ajax({
+    url: "/DAC/php/taf/actions.php",
+    type: "POST",
+    dataType: "json",
+    data: {
+        action: "lister"
+    },
+
+    success: function(response) {
+      if (response.success) {
+        console.log(response.data);
+        TAF_FICHES_TEMP = response.data;
+        //TAF_FICHES_TEMP = TAF_FICHES_TEMP.find(function(p){ return String(p.id) === String(id); });
+
+        // Sécurité : vérifier que le taf existe et a des fiches_test
+        /*if (!TAF_FICHES_TEMP || !Array.isArray(TAF_FICHES_TEMP.fiches_test) || TAF_FICHES_TEMP.fiches_test.length === 0) {
+          console.warn('Aucune fiche de test trouvée pour cet id:', id);
+          return;
+        }*/
+
+        $.ajax({
+          url: '/DAC/php/taf/delete_fichier.php',
+          type: 'POST',
+          data: { name: TAF_FICHES_TEMP[0].fiches_test[0].name }, // <-- pas de [0] sur TAF_FICHES_TEMP
+          success: function(response) {
+            console.log('Fichier supprimé du serveur', response);
+          },
+          error: function(xhr) {
+            console.error('Erreur suppression fichier', xhr.responseText);
+          }
+        });
+
+          // Retrait immédiat de l'affichage (sans attendre la réponse serveur)
+          TAF_FICHES_TEMP = TAF_FICHES_TEMP.filter(function(p){ return p.id !== id; });
+          tafRenderFichesList();
+        } else {
+            console.log(response.message);
+        }
+    },
+
+    error: function(xhr) {
+        console.log("Erreur AJAX :", xhr.responseText);
+    }
+});
 }
 
 // ── 📎 Tâches Quotidiennes — Preuve d'achèvement (mêmes principes que la Zone Upload TAF) ──
@@ -19329,8 +19601,36 @@ $(document).on('click','.taf-exec-btn',function(e){e.stopPropagation();tafExecut
 $(document).on('click','.taf-del-btn',function(e){
   e.stopPropagation();var id=$(this).data('id');
   if(!confirm('Supprimer le TAF '+id+' ?'))return;
-  TAF_ITEMS=TAF_ITEMS.filter(function(t){return t.id!==id;});
-  tafSave();renderTAF();toast('success','🗑️','TAF '+id+' supprimé');
+    const dataDelete = {
+        action: 'supprimer',
+        id: id
+    };
+  
+    $.ajax({
+      url: "/DAC/php/taf/actions.php",
+      type: "POST",
+      data: dataDelete,
+      dataType: "json",
+
+      success: function(response){
+          console.log(response);
+          if(response.success){  
+            renderTAF();toast('success','🗑️','TAF '+id+' supprimé');
+          }else{
+
+              toast('error','Erreur',response.message);
+          }
+      },
+
+      error:function(xhr,status,error){
+
+          console.log("Status :",status);
+          console.log("Erreur :",error);
+          console.log("Réponse :",xhr.responseText);
+
+          alert("Erreur serveur : "+xhr.status);
+      }
+  });
 });
 $('#taf-add-btn').on('click',function(){tafOpenModal(null);});
 $('#taf-modal-close').on('click',tafCloseModal);
@@ -19366,22 +19666,44 @@ function _tafPopulateFrapLinked(tafId){
   }).join(''));
 }
 function tafCfgLoadForm(id){
-  var t=TAF_ITEMS.filter(function(x){return x.id===id;})[0];if(!t)return;
-  $('#taf-cfg-ref').val(t.id);$('#taf-cfg-categorie').val(t.categorie||'');
-  $('#taf-cfg-societe').val(t.societe||'');
-  $('#taf-cfg-rcm-ref').val(t.rcm_ref||'');
-  $('#taf-cfg-titre').val(t.titre||'');$('#taf-cfg-programme').val(t.programme||'');
-  $('#taf-cfg-docs').val(t.docs||'');$('#taf-cfg-contact').val(t.contact||'');
-  $('#taf-cfg-timing').val(t.timing||'');$('#taf-cfg-testplan').val(t.testplan||'');
-  $('#taf-cfg-testresults').val(t.testresults||'');$('#taf-cfg-priorite').val(t.priorite||'medium');
-  $('#taf-cfg-statut').val(t.statut||'todo');$('#taf-cfg-auditeur').val(t.auditeur||'');
-  $('#taf-cfg-consequences').val(t.consequences||'');
-  $('#taf-cfg-notes').val(t.notes||'');$('#taf-cfg-edit-id').val(t.id);
-  TAF_FICHES_TEMP = t.fiches_test ? JSON.parse(JSON.stringify(t.fiches_test)) : [];
-  $('#taf-cfg-fiche-input').val('');
-  tafRenderFichesList();
-  _tafPopulateSocietesMulti(t.societes_multi||[]);
-  _tafPopulateFrapLinked(t.id);
+  $.ajax({
+    url: "/DAC/php/taf/actions.php",
+    type: "POST",
+    dataType: "json",
+    data: {
+        action: "lister"
+    },
+
+    success: function(response) {
+        if (response.success) {
+          ////console.log(response.data);
+          TAF_ITEMS=response.data;
+          var t=TAF_ITEMS.filter(function(x){return x.id===id;})[0];if(!t)return;
+          $('#taf-cfg-ref').val(t.id);$('#taf-cfg-categorie').val(t.categorie||'');
+          $('#taf-cfg-societe').val(t.societe||'');
+          $('#taf-cfg-rcm-ref').val(t.rcm_ref||'');
+          $('#taf-cfg-titre').val(t.titre||'');$('#taf-cfg-programme').val(t.programme||'');
+          $('#taf-cfg-docs').val(t.docs||'');$('#taf-cfg-contact').val(t.contact||'');
+          $('#taf-cfg-timing').val(t.timing||'');$('#taf-cfg-testplan').val(t.testplan||'');
+          $('#taf-cfg-testresults').val(t.testresults||'');$('#taf-cfg-priorite').val(t.priorite||'medium');
+          $('#taf-cfg-statut').val(t.statut||'todo');$('#taf-cfg-auditeur').val(t.auditeur||'');
+          $('#taf-cfg-consequences').val(t.consequences||'');
+          $('#taf-cfg-notes').val(t.notes||'');$('#taf-cfg-edit-id').val(t.id);
+          TAF_FICHES_TEMP = t.fiches_test ? JSON.parse(JSON.stringify(t.fiches_test)) : [];
+          $('#taf-cfg-fiche-input').val('');
+          tafRenderFichesList();
+          _tafPopulateSocietesMulti(t.societes_multi||[]);
+          _tafPopulateFrapLinked(t.id);
+        } else {
+            console.log(response.message);
+        }
+    },
+
+    error: function(xhr) {
+        console.log("Erreur AJAX :", xhr.responseText);
+    }
+});
+  
 }
 $('#taf-cfg-rcm-ref').on('change', function(){ tafApplyRCMLink(this.value); });
 // Zone Upload — Fiche de test
@@ -19390,21 +19712,90 @@ $('#taf-add-fiche').on('click', function(){
 });
 $('#taf-cfg-fiche-input').on('change', function(){
   tafHandleFiles(this.files);
-  this.value = '';
+  //this.value = '';
 });
-$('#taf-fiche-dropzone').on('dragover', function(e){
-  e.preventDefault(); e.stopPropagation();
-  $(this).addClass('dragover');
-}).on('dragleave drop', function(e){
-  e.preventDefault(); e.stopPropagation();
-  $(this).removeClass('dragover');
-}).on('drop', function(e){
-  var dt = e.originalEvent && e.originalEvent.dataTransfer;
-  if(dt && dt.files && dt.files.length) tafHandleFiles(dt.files);
-});
+
+function tafHandleFiles(files) {
+  var formData = new FormData();
+  var ref = $('#taf-cfg-ref').val().trim(); // récupère la référence
+
+  formData.append('ref', ref);
+  for (var i = 0; i < files.length; i++) {
+    formData.append('fichiers[]', files[i]);
+    tafRenderFichesList(files[i]);
+  }
+
+  $.ajax({
+    url: '/DAC/php/taf/upload.php',
+    type: 'POST',
+    data: formData,
+    processData: false,
+    contentType: false,
+    success: function(response) {
+      console.log('Upload réussi', response);
+    },
+    error: function(xhr) {
+      console.error('Erreur upload', xhr.responseText);
+    }
+  });
+
+  var files = Array.prototype.slice.call(files || []);
+  if(!files.length) return;
+  files.forEach(function(file){
+    if(file.size > TAF_FICHE_MAX_SIZE){
+      toast('error','⚠️','"'+file.name+'" dépasse 4 Mo — ignoré.');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      TAF_FICHES_TEMP.push({
+        id:      'ft_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+        name:    file.name,
+        type:    file.type || '',
+        size:    file.size,
+        dataUrl: '/DAC/php/taf/fichiers/' + file.name,
+        addedAt: new Date().toISOString().slice(0,10)
+      });
+      tafRenderFichesList();
+    };
+    reader.onerror = function(){
+      toast('error','⚠️','Lecture impossible pour "'+file.name+'".');
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+$('#taf-fiche-dropzone')
+  .on('dragenter dragover', function(e){
+    e.preventDefault(); e.stopPropagation();
+    $(this).addClass('dragover');
+  })
+  .on('dragleave drop', function(e){
+    e.preventDefault(); e.stopPropagation();
+    $(this).removeClass('dragover');
+  })
+  .on('drop', function(e){
+    var dt = e.originalEvent && e.originalEvent.dataTransfer;
+    if (dt && dt.files && dt.files.length) {
+      tafHandleFiles(dt.files);
+
+      // Reconstruire un DataTransfer valide pour l'input file
+      var newDT = new DataTransfer();
+      Array.from(dt.files).forEach(function(file){
+        newDT.items.add(file);
+      });
+      var input = document.getElementById('taf-file-input');
+      input.files = newDT.files;
+
+      // Si un autre script écoute le "change" de l'input pour afficher le fichier
+      $(input).trigger('change');
+    }
+  });
+
 $(document).on('click', '.taf-fiche-rm', function(e){
   e.stopPropagation();
   tafRemoveFiche($(this).data('fpid'));
+  
 });
 $(document).on('click', '.taf-fiche-open', function(){
   var pid = $(this).data('fpid');
@@ -19414,6 +19805,7 @@ $(document).on('click', '.taf-fiche-open', function(){
 $('#taf-cfg-reset-btn').on('click',tafCfgReset);
 $('#taf-cfg-save-btn').on('click',function(){
   var ref=$('#taf-cfg-ref').val().trim();
+
   var titre=$('#taf-cfg-titre').val().trim();
   if(!ref){toast('error','⚠️','La Réf # est obligatoire');return;}
   if(!titre){toast('error','⚠️','Le Travail à Faire est obligatoire');return;}
@@ -19430,7 +19822,9 @@ $('#taf-cfg-save-btn').on('click',function(){
     if(prev){prevStatut=prev.statut||'';prevStatutUpdatedAt=prev.statut_updated_at||'';prevAuditRefs=prev.audit_refs||[];}
   }
   var statutUpdatedAt=(newStatut!==prevStatut)?dateStr:prevStatutUpdatedAt;
-  var obj={id:ref,categorie:$('#taf-cfg-categorie').val().trim(),
+  var data={
+    action:'ajouter',
+    id:ref,categorie:$('#taf-cfg-categorie').val().trim(),
     societe:$('#taf-cfg-societe').val(),rcm_ref:$('#taf-cfg-rcm-ref').val(),titre:titre,
     programme:$('#taf-cfg-programme').val().trim(),docs:$('#taf-cfg-docs').val().trim(),
     contact:$('#taf-cfg-contact').val().trim(),timing:$('#taf-cfg-timing').val().trim(),
@@ -19443,18 +19837,84 @@ $('#taf-cfg-save-btn').on('click',function(){
     notes:$('#taf-cfg-notes').val().trim(),
     societes_multi:[...document.querySelectorAll('.taf-soc-multi-cb:checked')].map(function(cb){return cb.value;}).filter(function(v){return v!==$('#taf-cfg-societe').val();}),
     audit_refs:prevAuditRefs,
-    fiches_test:TAF_FICHES_TEMP.slice()};
+    fiches_test:TAF_FICHES_TEMP.slice()
+  };
+
+  var data_modifier_taf={
+    action:'modifier',
+    id:ref,categorie:$('#taf-cfg-categorie').val().trim(),
+    societe:$('#taf-cfg-societe').val(),rcm_ref:$('#taf-cfg-rcm-ref').val(),titre:titre,
+    programme:$('#taf-cfg-programme').val().trim(),docs:$('#taf-cfg-docs').val().trim(),
+    contact:$('#taf-cfg-contact').val().trim(),timing:$('#taf-cfg-timing').val().trim(),
+    testplan:$('#taf-cfg-testplan').val().trim(),testresults:$('#taf-cfg-testresults').val(),
+    priorite:$('#taf-cfg-priorite').val(),statut:newStatut,
+    statut_updated_at:statutUpdatedAt,
+    updated_at:dateStr,
+    auditeur:$('#taf-cfg-auditeur').val(),
+    consequences:$('#taf-cfg-consequences').val().trim(),
+    notes:$('#taf-cfg-notes').val().trim(),
+    societes_multi:[...document.querySelectorAll('.taf-soc-multi-cb:checked')].map(function(cb){return cb.value;}).filter(function(v){return v!==$('#taf-cfg-societe').val();}),
+    audit_refs:prevAuditRefs,
+    fiches_test:TAF_FICHES_TEMP.slice()
+  };
+
   if(editId){
     var idx=-1;for(var i=0;i<TAF_ITEMS.length;i++){if(TAF_ITEMS[i].id===editId){idx=i;break;}}
-    if(idx>=0)TAF_ITEMS[idx]=obj;else TAF_ITEMS.push(obj);
-    toast('success','✅','TAF '+ref+' modifié');
-    frapSyncFromTAF(obj);
+    if(idx>=0)TAF_ITEMS[idx]=data_modifier_taf;else TAF_ITEMS.push(data_modifier_taf);
+  
+    frapSyncFromTAF(data_modifier_taf);
+    $.ajax({
+      url: "/DAC/php/taf/actions.php",
+      type: "POST",
+      data: data_modifier_taf,
+      dataType: "json",
+
+      success: function(response){
+          console.log(response);
+          toast('success','✅','TAF '+ref+' modifié');
+          tafCloseModal();
+          renderTAF();
+          tafCfgReset();
+      },
+
+      error:function(xhr,status,error){
+
+          console.log("Status :",status);
+          console.log("Erreur :",error);
+          console.log("Réponse :",xhr.responseText);
+
+          alert("Erreur serveur : "+xhr.status);
+
+      }
+    });
   } else {
     var exists=false;for(var j=0;j<TAF_ITEMS.length;j++){if(TAF_ITEMS[j].id===ref){exists=true;break;}}
     if(exists){toast('error','⚠️','La Réf '+ref+' existe déjà');return;}
-    TAF_ITEMS.push(obj);toast('success','✅','TAF '+ref+' ajouté');
+    $.ajax({
+      url: "/DAC/php/taf/actions.php",
+      type: "POST",
+      data: data,
+      dataType: "json",
+
+      success: function(response){
+          console.log(response);
+          toast('success','✅','TAF '+ref+' ajouté');
+          tafCloseModal();
+          renderTAF();
+          tafCfgReset();
+      },
+
+      error:function(xhr,status,error){
+
+          console.log("Status :",status);
+          console.log("Erreur :",error);
+          console.log("Réponse :",xhr.responseText);
+
+          alert("Erreur serveur : "+xhr.status);
+
+      }
+    });
   }
-  tafSave();tafCfgReset();renderTAF();tafCloseModal();
 });
 
 
@@ -19567,39 +20027,14 @@ if(typeof toast === 'undefined'){
 var FRAP_DATA = [];
 
 // ── Données par défaut (démo) ──────────────────────────────────────
-var FRAP_DEFAULT = [
-  {
-    id:'FRAP-001',
-    numero:'1',
-    titre:"Absence de filtrage des entrées sur site et inexistence d'un registre de suivi des flux (entrées/sorties)",
-    criticite:'critique',
-    ref:'C-004',
-    societe:'',
-    cycle:'Sécurité physique',
-    auditeur:'',
-    description:"Absence de filtrage des entrées sur site et inexistence d'un registre de suivi des flux (entrées/sorties). Aucun dispositif ne permet de tracer les mouvements de personnes ou de matériels.",
-    causes:"Absence de procédure formalisée et de moyens dédiés à la sécurité des accès.",
-    consequences:"Vol, sabotage, détournements non détectés. Impossibilité de reconstituer les accès en cas d'incident.",
-    recommandations:[
-      "Mettre en place un poste de contrôle à l'entrée du site avec identification obligatoire de toute personne, accompagné d'une procédure formalisée de gestion des visiteurs et intervenants extérieurs.",
-      "Instaurer un registre électronique des entrées/sorties conservé 12 mois minimum."
-    ],
-    actions:[
-      "Construction d'un abri à l'entrée du site pour le contrôleur",
-      "Mise en place d'un registre numérique de contrôle d'accès"
-    ],
-    created_at: new Date().toISOString().slice(0,10),
-    updated_at: new Date().toISOString().slice(0,10)
-  }
-];
 
 function frapLoad(){
-  try {
+  /*try {
     var r = localStorage.getItem('dac_frap');
     FRAP_DATA = r ? JSON.parse(r) : JSON.parse(JSON.stringify(FRAP_DEFAULT));
   } catch(e) {
     FRAP_DATA = JSON.parse(JSON.stringify(FRAP_DEFAULT));
-  }
+  }*/
 }
 function frapSave(){
   try {
@@ -19688,9 +20123,12 @@ function frapRenderPreuvesList(){
     box.innerHTML = '<div style="font-size:10.5px;color:var(--text-dim);font-style:italic;">Aucune pièce jointe.</div>';
     return;
   }
+  console.log(FRAP_PREUVES_TEMP);
   box.innerHTML = FRAP_PREUVES_TEMP.map(function(p){
+    console.log(FRAP_PREUVES_TEMP);
     var isImg = /^image\//.test(p.type||'');
     var shortName = p.name && p.name.length > 15 ? p.name.slice(0,13)+'…' : (p.name||'PJ');
+    //var fileUrl = 'fichiers/' + p.path;
     return '<div class="frap-preuve-chip">'
       + '<span class="frap-preuve-rm" data-pid="'+p.id+'" title="Retirer">×</span>'
       + (isImg
@@ -19703,6 +20141,27 @@ function frapRenderPreuvesList(){
 }
 
 function frapHandleFiles(fileList){
+  var formData = new FormData();
+
+  for (var i = 0; i < fileList.length; i++) {
+    formData.append('fichiers[]', fileList[i]);
+    frapRenderPreuvesList(fileList[i]);
+  }
+
+  $.ajax({
+    url: '/DAC/php/frap/upload.php',
+    type: 'POST',
+    data: formData,
+    processData: false,
+    contentType: false,
+    success: function(response) {
+      console.log('Upload réussi', response);
+    },
+    error: function(xhr) {
+      console.error('Erreur upload', xhr.responseText);
+    }
+  });
+
   var files = Array.prototype.slice.call(fileList || []);
   if(!files.length) return;
   files.forEach(function(file){
@@ -19713,11 +20172,11 @@ function frapHandleFiles(fileList){
     var reader = new FileReader();
     reader.onload = function(ev){
       FRAP_PREUVES_TEMP.push({
-        id:      'pv_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+        id:      file.name,
         name:    file.name,
         type:    file.type || '',
         size:    file.size,
-        dataUrl: ev.target.result,
+        dataUrl: '/DAC/php/frap/fichiers/' + file.name,
         addedAt: new Date().toISOString().slice(0,10)
       });
       frapRenderPreuvesList();
@@ -19730,8 +20189,44 @@ function frapHandleFiles(fileList){
 }
 
 function frapRemovePreuve(id){
-  FRAP_PREUVES_TEMP = FRAP_PREUVES_TEMP.filter(function(p){ return p.id !== id; });
-  frapRenderPreuvesList();
+  $.ajax({
+    url: "/DAC/php/frap/actions.php",
+    type: "POST",
+    dataType: "json",
+    data: {
+        action: "lister"
+    },
+
+    success: function(response) {
+      if (response.success) {
+        console.log(response.data);
+        FRAP_PREUVES_TEMP = response.data;
+        
+        $.ajax({
+          url: '/DAC/php/frap/delete_fichier.php',
+          type: 'POST',
+          data: { name: FRAP_PREUVES_TEMP[0].preuves[0].name }, // <-- pas de [0] sur TAF_FICHES_TEMP
+          success: function(response) {
+            console.log('Fichier supprimé du serveur', response);
+          },
+          error: function(xhr) {
+            console.error('Erreur suppression fichier', xhr.responseText);
+          }
+        });
+
+          // Retrait immédiat de l'affichage (sans attendre la réponse serveur)
+          FRAP_PREUVES_TEMP = FRAP_PREUVES_TEMP.filter(function(p){ return String(p.id) !== String(id); });
+          frapRenderPreuvesList();
+        } else {
+            console.log(response.message);
+        }
+    },
+
+    error: function(xhr) {
+        console.log("Erreur AJAX :", xhr.responseText);
+    }
+  });
+
 }
 
 // Convertit un data URL (base64) en Blob pour ouverture/téléchargement
@@ -19768,39 +20263,60 @@ var FRAP_CRIT_CLASS  = {critique:'frap-b-critique', majeur:'frap-b-majeur', mode
 
 // ── Rendu principal ────────────────────────────────────────────────
 function renderFRAP(){
-  // Peupler filtre sociétés
-  var socSel = document.getElementById('frap-filter-societe');
-  var prevSoc = socSel ? socSel.value : '';
-  if(socSel){
-    var socs = [];
-    FRAP_DATA.forEach(function(f){ if(f.societe && socs.indexOf(f.societe)<0) socs.push(f.societe); });
-    var opts = '<option value="">Toutes sociétés</option>';
-    socs.sort().forEach(function(s){ opts += '<option value="'+escHtml(s)+'">'+escHtml(s)+'</option>'; });
-    socSel.innerHTML = opts;
-    if(prevSoc) socSel.value = prevSoc;
-  }
+  $.ajax({
+    url: "/DAC/php/frap/actions.php",
+    type: "POST",
+    dataType: "json",
+    data: {
+        action: "lister"
+    },
 
-  var filtered = frapGetFiltered();
+    success: function(response) {
+        if (response.success) {
+            FRAP_DATA=response.data;
 
-  $('#frap-count-badge').text(FRAP_DATA.length);
+            var socSel = document.getElementById('frap-filter-societe');
+            var prevSoc = socSel ? socSel.value : '';
+            if(socSel){
+              var socs = [];
+              FRAP_DATA.forEach(function(f){ if(f.societe && socs.indexOf(f.societe)<0) socs.push(f.societe); });
+              var opts = '<option value="">Toutes sociétés</option>';
+              socs.sort().forEach(function(s){ opts += '<option value="'+escHtml(s)+'">'+escHtml(s)+'</option>'; });
+              socSel.innerHTML = opts;
+              if(prevSoc) socSel.value = prevSoc;
+            }
 
-  var container = document.getElementById('frap-cards-container');
-  var emptyEl   = document.getElementById('frap-empty');
-  if(!container) return;
+            var filtered = frapGetFiltered();
 
-  if(filtered.length === 0){
-    container.innerHTML = '';
-    if(emptyEl) emptyEl.style.display = 'block';
-    return;
-  }
-  if(emptyEl) emptyEl.style.display = 'none';
+            $('#frap-count-badge').text(FRAP_DATA.length);
 
-  var html = '';
-  filtered.forEach(function(f){
-    html += frapCardHtml(f, true);
+            var container = document.getElementById('frap-cards-container');
+            var emptyEl   = document.getElementById('frap-empty');
+            if(!container) return;
+
+            if(filtered.length === 0){
+              container.innerHTML = '';
+              if(emptyEl) emptyEl.style.display = 'block';
+              return;
+            }
+            if(emptyEl) emptyEl.style.display = 'none';
+
+            var html = '';
+            filtered.forEach(function(f){
+              html += frapCardHtml(f, true);
+            });
+
+            container.innerHTML = html;
+        } else {
+            console.log(response.message);
+        }
+    },
+
+    error: function(xhr) {
+        console.log("Erreur AJAX :", xhr.responseText);
+    }
   });
-
-  container.innerHTML = html;
+  // Peupler filtre sociétés
 }
 
 // ── Construction HTML d'une carte FRAP (réutilisée à l'écran ET à l'impression) ──
@@ -20094,9 +20610,12 @@ function frapSaveModal(){
 
   var now = new Date().toISOString().slice(0,10);
   if(editId){
-    var idx = FRAP_DATA.findIndex(function(f){ return f.id === editId; });
-    if(idx >= 0){
-      Object.assign(FRAP_DATA[idx], {
+    var idx = FRAP_DATA.findIndex(function(f){ return String(f.id) === String(editId); });
+
+    if(idx != -1){
+      const data_modifier_frap = {
+        action:'modifier',
+        id:           editId,
         numero:       num,
         ref:          $('#frap-f-ref').val().trim(),
         audit_refs:   auditRefsVal,
@@ -20112,12 +20631,37 @@ function frapSaveModal(){
         recommandations: recos,
         actions:      acts,
         preuves:      FRAP_PREUVES_TEMP.slice(),
+        created_at:   now,
         updated_at:   now
-      });
+      };
+      
+      $.ajax({
+        url: "/DAC/php/frap/actions.php",
+        type: "POST",
+        data: data_modifier_frap,
+        dataType: "json",
+
+        success: function(response){
+            toast('success','✅','FRAP modifiée.');
+            frapCloseModal();
+            renderFRAP();
+        },
+
+        error:function(xhr,status,error){
+
+            console.log("Status :",status);
+            console.log("Erreur :",error);
+            console.log("Réponse :",xhr.responseText);
+
+            alert("Erreur serveur : "+xhr.status);
+        }
+    }); 
     }
-    toast('success','✅','FRAP modifiée.');
+    
   } else {
-    FRAP_DATA.push({
+    
+    const data = {
+      action:'ajouter',
       id:           'FRAP-'+Date.now(),
       numero:       num,
       ref:          $('#frap-f-ref').val().trim(),
@@ -20136,27 +20680,77 @@ function frapSaveModal(){
       preuves:      FRAP_PREUVES_TEMP.slice(),
       created_at:   now,
       updated_at:   now
-    });
-    toast('success','✅','FRAP ajoutée.');
-  }
+    };
 
-  frapSave();
-  frapCloseModal();
-  renderFRAP();
+    $.ajax({
+      url: "/DAC/php/frap/actions.php",
+      type: "POST",
+      data: data,
+      dataType: "json",
+
+      success: function(response){
+          toast('success','✅','FRAP ajoutée.');
+          frapCloseModal();
+          renderFRAP();
+      },
+
+      error:function(xhr,status,error){
+
+          console.log("Status :",status);
+          console.log("Erreur :",error);
+          console.log("Réponse :",xhr.responseText);
+
+          alert("Erreur serveur : "+xhr.status);
+      }
+    }); 
+  }
 }
 
 function frapEdit(id){
-  var item = FRAP_DATA.find(function(f){ return f.id === id; });
+  var item = FRAP_DATA.find(function(f){ return String(f.id) === String(id); });
   if(item) frapOpenModal(item);
 }
 window.frapEdit = frapEdit;
 
 function frapDelete(id){
   if(!confirm('Supprimer cette FRAP ?')) return;
-  FRAP_DATA = FRAP_DATA.filter(function(f){ return f.id !== id; });
-  frapSave();
-  renderFRAP();
-  toast('success','🗑️','FRAP supprimée.');
+  
+    const dataDeletefrap = {
+        action: 'supprimer',
+        id: id
+    };
+    
+    $.ajax({
+      url: "/DAC/php/frap/actions.php",
+      type: "POST",
+      data: dataDeletefrap,
+      dataType: "json",
+
+      success: function(response){
+
+          console.log(response);
+
+          if(response.success){  
+            renderFRAP();
+            toast('success','🗑️','FRAP supprimée.');
+          }else{
+
+              toast('error','Erreur',response.message);
+          }
+      },
+
+
+      error:function(xhr,status,error){
+
+          console.log("Status :",status);
+          console.log("Erreur :",error);
+          console.log("Réponse :",xhr.responseText);
+
+          alert("Erreur serveur : "+xhr.status);
+
+          $('#soc-save-btn').prop('disabled', false);
+      }
+  });
 }
 window.frapDelete = frapDelete;
 
@@ -20252,7 +20846,7 @@ function frapBuildPrintDoc(f){
 
 // Impression d'une seule FRAP (bouton 🖨️ sur la carte)
 function frapPrintOne(id){
-  var f = FRAP_DATA.find(function(x){ return x.id === id; });
+  var f = FRAP_DATA.find(function(x){ return String(x.id) === String(id); });
   if(!f){ toast('error','!','FRAP introuvable.'); return; }
   $('#om-print-area').html(frapBuildPrintDoc(f)).show();
   window.print();
