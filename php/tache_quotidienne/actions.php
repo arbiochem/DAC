@@ -1,13 +1,14 @@
 <?php
 
-require_once 'repository.php'; // adapte le chemin/nom si Repository dédié à Frap
-require_once 'frap.php';
+require_once 'repository.php'; // adapte le chemin/nom si Repository dédié à TacheQuotidienne
+require_once 'tache_quotidienne.php';
+require_once 'tache_rapide.php';
 
 header('Content-Type: application/json');
 
 $action = $_POST['action'] ?? '';
 
-$repo = new Repository(); // ou FrapRepository si tu sépares
+$repo = new Repository(); // ou TacheQuotidienneRepository si tu sépares
 
 // Petit helper pour décoder les champs tableaux envoyés en JSON depuis le JS
 function decodePostArray($key) {
@@ -23,59 +24,74 @@ function decodePostArray($key) {
     return is_array($decoded) ? $decoded : [];
 }
 
+// Helper : convertit une valeur POST (string "true"/"false"/"1"/"0") en booléen PHP
+function decodePostBool($key) {
+    $raw = $_POST[$key] ?? false;
+    if (is_bool($raw)) return $raw;
+    return filter_var($raw, FILTER_VALIDATE_BOOLEAN);
+}
+
 switch ($action) {
     case 'ajouter':
-        $frap = new Frap(
-            $_POST['numero'],
-            $_POST['ref'],
-            decodePostArray('audit_refs'),
-            decodePostArray('taf_ref'),
+        $tache = new TacheQuotidienne(
             $_POST['titre'],
-            $_POST['criticite'],
+            $_POST['priorite'],
+            $_POST['statut'],
+            $_POST['date'],
+            $_POST['responsable'],
             $_POST['societe'],
-            $_POST['cycle'],
-            $_POST['auditeur'],
-            $_POST['description'],
-            $_POST['causes'],
-            $_POST['consequences'],
-            decodePostArray('recommandations'),
-            decodePostArray('actions'),
-            decodePostArray('preuves'),
-            date('d/m/Y'),
-            date('d/m/Y')// updated_at généré côté serveur à la création
+            $_POST['avancement'],
+            $_POST['duree_heures'] ?? null,
+            $_POST['notes'],
+            decodePostBool('permanent'),
+            $_POST['recurrenceType'] ?? '',
+            decodePostArray('recurrenceDow'),
+            decodePostArray('recurrenceDom'),
+            decodePostArray('fiches_completion')
         );
 
-        $ok = $repo->ajouter($frap);
+        $ok = $repo->ajouter($tache);
 
         echo json_encode([
             "success" => $ok,
-            "id"      => $ok ? $frap->id : null,
+            "id"      => $ok ? $tache->id : null,
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        break;
+    case 'modifier_rapide':
+        $id = $_POST['id'] ?? null;
+        $plan = new Tache_rapide(
+            $_POST['avancement'],
+            (int) $id
+        );
+
+        $ok = $repo->modifier_rapide($plan);
+
+        echo json_encode([
+            "success" => $ok
+        ]);
         break;
 
     case 'lister':
-        $fraps = $repo->getAll();
+        $taches = $repo->getAll();
 
         $data = [];
-        foreach ($fraps as $f) {
+        foreach ($taches as $t) {
             $data[] = [
-                "id"              => $f->id,
-                "numero"          => $f->numero,
-                "ref"             => $f->ref,
-                "audit_refs"      => $f->audit_refs,
-                "taf_ref"         => $f->taf_ref,
-                "titre"           => $f->titre,
-                "criticite"       => $f->criticite,
-                "societe"         => $f->societe,
-                "cycle"           => $f->cycle,
-                "auditeur"        => $f->auditeur,
-                "description"     => $f->description,
-                "causes"          => $f->causes,
-                "consequences"    => $f->consequences,
-                "recommandations" => $f->recommandations,
-                "actions"         => $f->actions,
-                "preuves"         => $f->preuves,
-                "updated_at"      => $f->updated_at,
+                "id"                => $t->id,
+                "titre"             => $t->titre,
+                "priorite"          => $t->priorite,
+                "statut"            => $t->statut,
+                "date"              => $t->date,
+                "responsable"       => $t->responsable,
+                "societe"           => $t->societe,
+                "avancement"        => $t->avancement,
+                "duree_heures"      => $t->duree_heures,
+                "notes"             => $t->notes,
+                "permanent"         => $t->permanent,
+                "recurrenceType"    => $t->recurrenceType,
+                "recurrenceDow"     => $t->recurrenceDow,
+                "recurrenceDom"     => $t->recurrenceDom,
+                "fiches_completion" => $t->fiches_completion,
             ];
         }
 
@@ -92,34 +108,48 @@ switch ($action) {
             break;
         }
 
-        $frap = new Frap(
-            $_POST['numero'],
-            $_POST['ref'],
-            decodePostArray('audit_refs'),
-            decodePostArray('taf_ref'),
+        $tache = new TacheQuotidienne(
             $_POST['titre'],
-            $_POST['criticite'],
+            $_POST['priorite'],
+            $_POST['statut'],
+            $_POST['date'],
+            $_POST['responsable'],
             $_POST['societe'],
-            $_POST['cycle'],
-            $_POST['auditeur'],
-            $_POST['description'],
-            $_POST['causes'],
-            $_POST['consequences'],
-            decodePostArray('recommandations'),
-            decodePostArray('actions'),
-            decodePostArray('preuves'),
-            date('d/m/Y'), 
-            date('d/m/Y'),
+            $_POST['avancement'],
+            $_POST['duree_heures'] ?? null,
+            $_POST['notes'],
+            decodePostBool('permanent'),
+            $_POST['recurrenceType'] ?? '',
+            decodePostArray('recurrenceDow'),
+            decodePostArray('recurrenceDom'),
+            decodePostArray('fiches_completion'),
             (int) $id
         );
 
-        $ok = $repo->modifier($frap);
+        $ok = $repo->modifier($tache);
 
         echo json_encode([
             "success" => $ok
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         break;
+    case 'modifier_rapide':
+        $id = $_POST['id'] ?? null;
+        if (!$id) {
+            echo json_encode(["success" => false, "message" => "ID manquant"]);
+            break;
+        }
 
+        $tache = new Tache_rapide(
+            $_POST['avancement'],
+            (int) $id
+        );
+
+        $ok = $repo->modifier_rapide($tache);
+
+        echo json_encode([
+            "success" => $ok
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        break;
     case 'supprimer':
         $id = $_POST['id'] ?? null;
         if (!$id) {

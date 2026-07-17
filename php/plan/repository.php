@@ -113,7 +113,8 @@ class Repository {
             risque=:risque,
             statut=:statut,
             ftype=:ftype,
-            cycle_additionnel=:cycle_additionnel
+            cycle_additionnel=:cycle_additionnel,
+            missionCategory=:missionCategory
         WHERE ref = :ref";
 
         $stmt = $this->db->prepare($sql);
@@ -182,7 +183,6 @@ class Repository {
 
     // Construit le tableau de paramètres pour les requêtes préparées
     private function toParams(Plan $plan): array {
-        
         return [
             'ref'                 => $plan->ref,
             'societe'                 => $plan->societe,
@@ -211,7 +211,8 @@ class Repository {
             'risque'                 => $plan->risque,
             'statut'                 => $plan->statut,
             'cycle_additionnel'                 => json_encode($plan->cycle_additionnel),
-            'ftype'                 => $plan->ftype
+            'ftype'                 => $plan->ftype,
+            'missionCategory'       => $plan->missionCategory,
             ];
     }
 

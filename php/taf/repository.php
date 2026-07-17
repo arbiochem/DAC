@@ -14,13 +14,16 @@ class Repository {
     public function ajouter(Taf $taf): bool {
         $sql = "INSERT INTO taf (
                     categorie, titre, programme, docs, contact,
-                    testplan, testresults, priorite, statut, auditeur, notes, societes_multi, audit_refs, fiches_test
+                    testplan, testresults, priorite, statut, auditeur, notes, societes_multi, audit_refs, fiches_test,
+                    statut_updated_at,updated_at
                 ) VALUES (
                     :categorie, :titre, :programme, :docs, :contact,
                     :testplan, :testresults, :priorite, :statut, :auditeur, :notes,
                     :societes_multi,
                     :audit_refs,
-                    :fiches_test
+                    :fiches_test,
+                    :statut_updated_at,
+                    :updated_at
                 )";
 
         $stmt = $this->db->prepare($sql);

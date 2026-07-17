@@ -6546,6 +6546,8 @@ function renderAudits(f){
                 $(this).html(`<div class="pfill" style="width:${a.progress}%;background:${pc};"></div>`);
               });
 
+              $('#nb-audits').text(AUDITS.length);
+
           } else {
               console.log(response.message);
           }
@@ -8162,27 +8164,6 @@ $('#msave').on('click',function(){
             $('#soc-save-btn').prop('disabled', false);
         }
     }); 
-
-    /*const errs=[];
-    //const $ref=$('#f-ref'), $title=$('#f-title'), $soc=$('#f-societe'), $start=$('#f-start'), $end=$('#f-end');
-    //[$ref,$title,$soc,$start,$end].forEach($f=>$f.css('border-color',''));
-    if(!$ref.val().trim()){errs.push('Référence');$ref.css('border-color','var(--red)');}
-    if(!$title.val().trim()){errs.push('Intitulé');$title.css('border-color','var(--red)');}
-    if(!$soc.val()){errs.push('Société auditée');$soc.css('border-color','var(--red)');}
-    if(!$start.val()){errs.push('Date de début');$start.css('border-color','var(--red)');}
-    if(!$end.val()){errs.push('Date de fin');$end.css('border-color','var(--red)');}
-    if(errs.length){$('#aform-error').html('⚠ Champs obligatoires manquants : <strong>'+errs.join(', ')+'</strong>').show();return;}
-    const ref=$ref.val().trim();
-    const _equipe=[...document.querySelectorAll('.f-equipe-cb:checked')].map(cb=>cb.value);
-    AUDITS.push({ref,title:$title.val().trim(),societe:$soc.val(),auditor:$('#f-auditor').val()||'',superviseur:$('#f-superviseur').val()||'',equipe:_equipe,start:$start.val(),end:$end.val(),status:$('#f-status').val()||'planned',progress:parseInt($('#f-progress').val())||0,risk:$('#f-risk').val()||'medium',difficulte:$('#f-difficulte').val()||'moyenne',type:$('#f-type').val()||'',missionCategory:$('#f-mission-category').val()||'plan_audit',objectifs:$('#f-objectifs').val()||'',cycle:$('#f-cycle').val()||'',cycle_custom:$('#f-cycle-custom').val()||'',cycles_multi:[...document.querySelectorAll('.f-cycle-multi-cb:checked')].map(cb=>cb.value),actual_start:$('#f-actual-start').val()||'',actual_end:$('#f-actual-end').val()||'',lieu:$('#f-lieu').val()||'',statut_doc:$('#f-statut-doc').val()||'Projet de rapport',group:'Finance A',planRef:$('#f-plan-ref').val()||'',contexte:$('#f-contexte').val()||'',obj_general:$('#f-obj-general').val()||'',obj_specifiques:$('#f-obj-specifiques').val()||'',services:$('#f-services').val()||'',perimetreFonc:$('#f-perimetre-fonc').val()||'',pointsForts:$('#f-points-forts').val()||'',periodeRevue:{debMois:$('#f-psr-deb-mois').val()||'',debAnnee:$('#f-psr-deb-an').val()||'',finMois:$('#f-psr-fin-mois').val()||'',finAnnee:$('#f-psr-fin-an').val()||'',dureeM:parseInt($('#f-psr-duree').val())||''}});
-    $(this).removeData('mode');
-    tryRender(()=>syncMissionsFromAudits());
-    $('#nb-audits').text(AUDITS.length);
-    renderAudits(); renderWidgets();
-    if(isViewVisible('view-gantt')) tryRender(()=>renderGantt());
-    dbSave();
-    toast('success','✓',`Audit ${ref} créé → Mission ajoutée au Planning`);
-    closeModal();return;*/
   }
 });
 
@@ -8228,14 +8209,7 @@ renderActions();
 let GANTT_MISSIONS=SEED_GANTT();
 
 const PERMANENT_TASKS_DEFAULT = [
-  { id:'DT-PERM-001', titre:'Revue des accès et habilitations utilisateurs', priorite:'high',   statut:'todo', date:'', responsable:'', avancement:0, notes:'Vérification mensuelle des droits d\'accès aux systèmes sensibles.', permanent:true, recurrenceType:'dom', recurrenceDom:[1] },
-  { id:'DT-PERM-002', titre:'Mise à jour du registre des risques',           priorite:'high',   statut:'todo', date:'', responsable:'', avancement:0, notes:'Actualiser les fiches de risques en fonction des évolutions internes/externes.', permanent:true, recurrenceType:'dom', recurrenceDom:[1] },
-  { id:'DT-PERM-003', titre:'Suivi des recommandations en cours',            priorite:'high',   statut:'todo', date:'', responsable:'', avancement:0, notes:'Vérifier l\'avancement des actions correctives issues des derniers rapports d\'audit.', permanent:true, recurrenceType:'dow', recurrenceDow:[1] },
-  { id:'DT-PERM-004', titre:'Contrôle de la séparation des fonctions',       priorite:'medium', statut:'todo', date:'', responsable:'', avancement:0, notes:'S\'assurer qu\'aucun cumul incompatible de rôles n\'existe dans les processus clés.', permanent:true, recurrenceType:'dom', recurrenceDom:[15] },
-  { id:'DT-PERM-005', titre:'Revue des journaux d\'événements (logs)',        priorite:'medium', statut:'todo', date:'', responsable:'', avancement:0, notes:'Analyse des logs applicatifs et systèmes pour détecter toute anomalie ou activité suspecte.', permanent:true, recurrenceType:'dow', recurrenceDow:[1,3,5] },
-  { id:'DT-PERM-006', titre:'Veille réglementaire et conformité',            priorite:'medium', statut:'todo', date:'', responsable:'', avancement:0, notes:'Surveiller les évolutions législatives et normatives applicables (COSO, ISO 31000, etc.).', permanent:true, recurrenceType:'dom', recurrenceDom:[1] },
-  { id:'DT-PERM-007', titre:'Mise à jour du plan d\'audit annuel',           priorite:'low',    statut:'todo', date:'', responsable:'', avancement:0, notes:'Ajuster le planning des missions en fonction des nouvelles priorités identifiées.', permanent:true, recurrenceType:'dom', recurrenceDom:[1] },
-  { id:'DT-PERM-008', titre:'Archivage et classement des dossiers d\'audit', priorite:'low',    statut:'todo', date:'', responsable:'', avancement:0, notes:'Vérifier la complétude et l\'archivage des papiers de travail pour chaque mission clôturée.', permanent:true, recurrenceType:'dom', recurrenceDom:[28] },
+  
 ];
 
 const DOW_LABELS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
@@ -8476,290 +8450,308 @@ function updateGanttKpis(){
 let ganttFilterStatus='';
 
 function renderGantt(){
-  updateGanttKpis();
-  const bounds = ganttBounds();
-  const DW     = dayW();
-  const RH     = 38;
-  const today  = new Date(); today.setHours(0,0,0,0);
-  const rows   = buildGanttRows();
-  // Filtre statut : garder toutes les lignes appartenant aux missions qui passent le filtre
-  let filteredRows = rows;
-  if(ganttFilterStatus){
-    const passedMissionIds = new Set(
-      rows.filter(r=>r.type==='mission' && ganttStatusOf(r.data)===ganttFilterStatus).map(r=>r.id)
-    );
-    filteredRows = rows.filter(r=>
-      r.type==='mission' ? passedMissionIds.has(r.id)
-      : passedMissionIds.has(r.missionId)
-    );
-  }
+  $.ajax({
+    url: "/DAC/php/mission/actions.php",
+    type: "POST",
+    dataType: "json",
+    data: {
+        action: "lister"
+    },
 
-  const $left  = $('#gantt-excel-rows-left').empty();
-  const $right = $('#gantt-excel-rows-right').empty();
-  const $hdr   = $('#gantt-excel-timeline-header').empty();
-  const $empty = $('#gantt-excel-empty');
-  const $cont  = $('#gantt-excel-container');
+    success: function(response) {
+        if (response.success) {
+          GANTT_MISSIONS=response.data;
+          updateGanttKpis();
+          const bounds = ganttBounds();
+          const DW     = dayW();
+          const RH     = 38;
+          const today  = new Date(); today.setHours(0,0,0,0);
+          const rows   = buildGanttRows();
+          // Filtre statut : garder toutes les lignes appartenant aux missions qui passent le filtre
+          let filteredRows = rows;
+          if(ganttFilterStatus){
+            const passedMissionIds = new Set(
+              rows.filter(r=>r.type==='mission' && ganttStatusOf(r.data)===ganttFilterStatus).map(r=>r.id)
+            );
+            filteredRows = rows.filter(r=>
+              r.type==='mission' ? passedMissionIds.has(r.id)
+              : passedMissionIds.has(r.missionId)
+            );
+          }
 
-  if(!filteredRows.length){
-    $cont.hide(); $empty.show(); return;
-  }
-  $cont.show(); $empty.hide();
+          const $left  = $('#gantt-excel-rows-left').empty();
+          const $right = $('#gantt-excel-rows-right').empty();
+          const $hdr   = $('#gantt-excel-timeline-header').empty();
+          const $empty = $('#gantt-excel-empty');
+          const $cont  = $('#gantt-excel-container');
 
-  const days=[];
-  for(let i=0;i<bounds.days;i++){
-    const d=new Date(bounds.start); d.setDate(d.getDate()+i); days.push(d);
-  }
-  const totalW = days.length * DW;
+          if(!filteredRows.length){
+            $cont.hide(); $empty.show(); return;
+          }
+          $cont.show(); $empty.hide();
 
-  function isoWeek(d){
-    const t=new Date(d); t.setHours(0,0,0,0);
-    t.setDate(t.getDate()-((t.getDay()+6)%7)+3);
-    const jan4=new Date(t.getFullYear(),0,4);
-    return 1+Math.round(((t-jan4)/864e5-3+((jan4.getDay()+6)%7))/7);
-  }
-  const DAYS_FR=['Di','Lu','Ma','Me','Je','Ve','Sa'];
+          const days=[];
+          for(let i=0;i<bounds.days;i++){
+            const d=new Date(bounds.start); d.setDate(d.getDate()+i); days.push(d);
+          }
+          const totalW = days.length * DW;
 
-  const monthSpans=[], weekSpans=[];
-  days.forEach((d,i)=>{
-    const mk=`${d.getFullYear()}-${d.getMonth()}`;
-    const wk=`${d.getFullYear()}-W${isoWeek(d)}`;
-    if(!monthSpans.length||monthSpans.at(-1).key!==mk)
-      monthSpans.push({key:mk,label:`${MONTHS_FR_FULL[d.getMonth()]} ${d.getFullYear()}`,start:i,span:0,px:0});
-    monthSpans.at(-1).span++;
-    monthSpans.at(-1).px+=DW;
-    if(!weekSpans.length||weekSpans.at(-1).key!==wk)
-      weekSpans.push({key:wk,label:`S${isoWeek(d)}`,start:i,span:0,px:0});
-    weekSpans.at(-1).span++;
-    weekSpans.at(-1).px+=DW;
-  });
+          function isoWeek(d){
+            const t=new Date(d); t.setHours(0,0,0,0);
+            t.setDate(t.getDate()-((t.getDay()+6)%7)+3);
+            const jan4=new Date(t.getFullYear(),0,4);
+            return 1+Math.round(((t-jan4)/864e5-3+((jan4.getDay()+6)%7))/7);
+          }
+          const DAYS_FR=['Di','Lu','Ma','Me','Je','Ve','Sa'];
 
-  let hdrHtml=`<div style="display:flex;flex-direction:column;width:max-content;">`;
+          const monthSpans=[], weekSpans=[];
+          days.forEach((d,i)=>{
+            const mk=`${d.getFullYear()}-${d.getMonth()}`;
+            const wk=`${d.getFullYear()}-W${isoWeek(d)}`;
+            if(!monthSpans.length||monthSpans.at(-1).key!==mk)
+              monthSpans.push({key:mk,label:`${MONTHS_FR_FULL[d.getMonth()]} ${d.getFullYear()}`,start:i,span:0,px:0});
+            monthSpans.at(-1).span++;
+            monthSpans.at(-1).px+=DW;
+            if(!weekSpans.length||weekSpans.at(-1).key!==wk)
+              weekSpans.push({key:wk,label:`S${isoWeek(d)}`,start:i,span:0,px:0});
+            weekSpans.at(-1).span++;
+            weekSpans.at(-1).px+=DW;
+          });
 
-  hdrHtml+=`<div style="height:28px;display:flex;background:#1e293b;border-bottom:1px solid #334155;">`;
-  monthSpans.forEach(ms=>{
-    hdrHtml+=`<div style="width:${ms.px}px;flex-shrink:0;border-right:2px solid #475569;display:flex;align-items:center;padding:0 8px;font-size:10.5px;font-weight:800;color:#e2e8f0;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;">${ms.label}</div>`;
-  });
-  hdrHtml+=`</div>`;
+          let hdrHtml=`<div style="display:flex;flex-direction:column;width:max-content;">`;
 
-  hdrHtml+=`<div style="height:28px;display:flex;background:#1e293b;border-bottom:2px solid #334155;">`;
-  days.forEach(d=>{
-    const dow=d.getDay(), isToday=d.getTime()===today.getTime();
-    const isWk=dow===0||dow===6;
-    const isMon=dow===1;
-    const bg=isToday?'#0070f2':isWk?'#0f172a':'transparent';
-    const col=isToday?'#fff':isWk?'#475569':'#94a3b8';
-    const fw=isToday||isMon?'800':'500';
-    const br=isMon&&ganttZoom!=='day'?'border-left:1px solid #475569;':'';
-    hdrHtml+=`<div style="width:${DW}px;min-width:${DW}px;flex-shrink:0;background:${bg};${br}display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border-right:1px solid rgba(71,85,105,.4);">
-      <span style="font-size:${DW>16?'10':'8.5'}px;font-weight:${fw};color:${col};line-height:1;">${d.getDate()}</span>
-      ${DW>14?`<span style="font-size:7.5px;color:${isToday?'rgba(255,255,255,.75)':isWk?'#334155':'#475569'};text-transform:uppercase;line-height:1;">${DAYS_FR[dow]}</span>`:''}
-    </div>`;
-  });
-  hdrHtml+=`</div></div>`;
-  $hdr.html(hdrHtml);
+          hdrHtml+=`<div style="height:28px;display:flex;background:#1e293b;border-bottom:1px solid #334155;">`;
+          monthSpans.forEach(ms=>{
+            hdrHtml+=`<div style="width:${ms.px}px;flex-shrink:0;border-right:2px solid #475569;display:flex;align-items:center;padding:0 8px;font-size:10.5px;font-weight:800;color:#e2e8f0;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;">${ms.label}</div>`;
+          });
+          hdrHtml+=`</div>`;
 
-  /* ── Filter dropdowns ── */
-  const $mf=$('#gantt-filter-mission').empty().append('<option value="">— Toutes les missions —</option>');
-  const $sf=$('#gantt-filter-soc').empty().append('<option value="">— Toutes les sociétés —</option>');
-  const $tf=$('#gantt-filter-type').empty().append('<option value="">— Tous les types —</option>');
-  const socs=new Set(), types=new Set();
-  GANTT_MISSIONS.forEach(m=>{
-    $mf.append(`<option value="${m.id}">${m.title}</option>`);
-    if(m.societe) socs.add(m.societe);
-    const audit=AUDITS.find(a=>a.ref===m.ref||(m.id==='M-'+a.ref));
-    if(audit&&audit.type) types.add(audit.type);
-  });
-  socs.forEach(s=>$sf.append(`<option value="${s}">${s}</option>`));
-  [...types].sort().forEach(t=>$tf.append(`<option value="${t}">${t}</option>`));
-  // Populate chef filter
-  const $cf=$('#gantt-filter-chef').empty().append('<option value="">— Tous les chefs —</option>');
-  const chefs=new Set();
-  GANTT_MISSIONS.forEach(m=>{ if(m.chef) chefs.add(m.chef); });
-  [...chefs].sort().forEach(c=>$cf.append(`<option value="${c}">${c}</option>`));
-  $mf.val(ganttFilterMission); $sf.val(ganttFilterSoc); $tf.val(ganttFilterType);
-  $cf.val(ganttFilterChef);
+          hdrHtml+=`<div style="height:28px;display:flex;background:#1e293b;border-bottom:2px solid #334155;">`;
+          days.forEach(d=>{
+            const dow=d.getDay(), isToday=d.getTime()===today.getTime();
+            const isWk=dow===0||dow===6;
+            const isMon=dow===1;
+            const bg=isToday?'#0070f2':isWk?'#0f172a':'transparent';
+            const col=isToday?'#fff':isWk?'#475569':'#94a3b8';
+            const fw=isToday||isMon?'800':'500';
+            const br=isMon&&ganttZoom!=='day'?'border-left:1px solid #475569;':'';
+            hdrHtml+=`<div style="width:${DW}px;min-width:${DW}px;flex-shrink:0;background:${bg};${br}display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border-right:1px solid rgba(71,85,105,.4);">
+              <span style="font-size:${DW>16?'10':'8.5'}px;font-weight:${fw};color:${col};line-height:1;">${d.getDate()}</span>
+              ${DW>14?`<span style="font-size:7.5px;color:${isToday?'rgba(255,255,255,.75)':isWk?'#334155':'#475569'};text-transform:uppercase;line-height:1;">${DAYS_FR[dow]}</span>`:''}
+            </div>`;
+          });
+          hdrHtml+=`</div></div>`;
+          $hdr.html(hdrHtml);
 
-  /* ── Rows ── */
-  const todayX = diffDays(bounds.start,today);
+          /* ── Filter dropdowns ── */
+          const $mf=$('#gantt-filter-mission').empty().append('<option value="">— Toutes les missions —</option>');
+          const $sf=$('#gantt-filter-soc').empty().append('<option value="">— Toutes les sociétés —</option>');
+          const $tf=$('#gantt-filter-type').empty().append('<option value="">— Tous les types —</option>');
+          const socs=new Set(), types=new Set();
+          GANTT_MISSIONS.forEach(m=>{
+            $mf.append(`<option value="${m.id}">${m.title}</option>`);
+            if(m.societe) socs.add(m.societe);
+            const audit=AUDITS.find(a=>a.ref===m.ref||(m.id==='M-'+a.ref));
+            if(audit&&audit.type) types.add(audit.type);
+          });
+          socs.forEach(s=>$sf.append(`<option value="${s}">${s}</option>`));
+          [...types].sort().forEach(t=>$tf.append(`<option value="${t}">${t}</option>`));
+          // Populate chef filter
+          const $cf=$('#gantt-filter-chef').empty().append('<option value="">— Tous les chefs —</option>');
+          const chefs=new Set();
+          GANTT_MISSIONS.forEach(m=>{ if(m.chef) chefs.add(m.chef); });
+          [...chefs].sort().forEach(c=>$cf.append(`<option value="${c}">${c}</option>`));
+          $mf.val(ganttFilterMission); $sf.val(ganttFilterSoc); $tf.val(ganttFilterType);
+          $cf.val(ganttFilterChef);
 
-  filteredRows.forEach((row,ri)=>{
-    const d=row.data;
+          /* ── Rows ── */
+          const todayX = diffDays(bounds.start,today);
 
-    // ── Société group header row ──
-    if(row.type==='societe-group'){
-      const socGrpH=28;
-      const sd=row.data;
-      $left.append(`
-        <div style="display:flex;height:${socGrpH}px;background:linear-gradient(90deg,#1e293b,#334155);border-bottom:2px solid #475569;border-left:4px solid #6366f1;align-items:center;padding:0 10px;gap:7px;position:sticky;left:0;">
-          <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a5b4fc;">🏢</span>
-          <span style="font-size:11px;font-weight:700;color:#e2e8f0;letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${sd.title}</span>
-          ${sd.socStart?`<span style="font-size:9px;font-family:var(--mono);color:#94a3b8;flex-shrink:0;">📅 ${sd.socFmtStart}</span>
-          <span style="font-size:9px;color:#475569;flex-shrink:0;">→</span>
-          <span style="font-size:9px;font-family:var(--mono);color:#94a3b8;flex-shrink:0;">${sd.socFmtEnd}</span>
-          <span style="font-size:8.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:rgba(99,102,241,.25);color:#a5b4fc;flex-shrink:0;">${sd.socDur}</span>`:''}
-        </div>`);
-      $right.append(`
-        <div style="height:${socGrpH}px;width:${totalW}px;background:linear-gradient(90deg,rgba(99,102,241,.12),rgba(99,102,241,.04));border-bottom:2px solid #475569;"></div>`);
-      return;
+          filteredRows.forEach((row,ri)=>{
+            const d=row.data;
+
+            // ── Société group header row ──
+            if(row.type==='societe-group'){
+              const socGrpH=28;
+              const sd=row.data;
+              $left.append(`
+                <div style="display:flex;height:${socGrpH}px;background:linear-gradient(90deg,#1e293b,#334155);border-bottom:2px solid #475569;border-left:4px solid #6366f1;align-items:center;padding:0 10px;gap:7px;position:sticky;left:0;">
+                  <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#a5b4fc;">🏢</span>
+                  <span style="font-size:11px;font-weight:700;color:#e2e8f0;letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${sd.title}</span>
+                  ${sd.socStart?`<span style="font-size:9px;font-family:var(--mono);color:#94a3b8;flex-shrink:0;">📅 ${sd.socFmtStart}</span>
+                  <span style="font-size:9px;color:#475569;flex-shrink:0;">→</span>
+                  <span style="font-size:9px;font-family:var(--mono);color:#94a3b8;flex-shrink:0;">${sd.socFmtEnd}</span>
+                  <span style="font-size:8.5px;font-weight:700;padding:1px 6px;border-radius:10px;background:rgba(99,102,241,.25);color:#a5b4fc;flex-shrink:0;">${sd.socDur}</span>`:''}
+                </div>`);
+              $right.append(`
+                <div style="height:${socGrpH}px;width:${totalW}px;background:linear-gradient(90deg,rgba(99,102,241,.12),rgba(99,102,241,.04));border-bottom:2px solid #475569;"></div>`);
+              return;
+            }
+
+            const isCollapsed=!!ganttCollapsed[row.id];
+            const hasChildren=row.type==='mission'||(row.type==='task'&&(d.subtasks||[]).length>0);
+            let missionStatus='';
+            if(row.type==='mission') missionStatus=ganttStatusOf(d);
+
+            /* ── LEFT cell (spreadsheet columns) ── */
+            const isMission=row.type==='mission';
+            const isTask=row.type==='task';
+            const isSub=row.type==='subtask';
+            const isMile=row.type==='milestone';
+
+            // Row background alternation + status
+            let rowBg='';
+            if(isMission){
+              if(missionStatus==='completed')  rowBg='#f0fdf4';
+              else if(missionStatus==='late')       rowBg='#fff5f5';
+              else if(missionStatus==='planned')    rowBg='#f8fafc';
+              else                                  rowBg='#eff6ff';
+            } else {
+              rowBg = ri%2===0?'var(--surface)':'var(--surface2)';
+            }
+
+            // Left border color per type
+            const lBorderColor=isMission
+              ? (missionStatus==='late'     ?'#ef4444'
+                :missionStatus==='completed'?'#22c55e'
+                :missionStatus==='planned'  ?'#94a3b8'
+                :'#3b82f6')
+              : isTask?'#10b981':isSub?'#6366f1':'#f59e0b';
+
+            // Indent
+            const indent=isMission?0:isTask?16:isSub?30:16;
+
+            // Toggle button
+            const toggleHtml=hasChildren
+              ?`<span class="gantt-row-toggle" data-rowid="${row.id}" style="width:14px;height:14px;border-radius:3px;background:${isMission?'rgba(59,130,246,.15)':'var(--surface3)'};border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:8px;cursor:pointer;flex-shrink:0;color:var(--text-muted);margin-right:4px;">${isCollapsed?'▶':'▼'}</span>`
+              :`<span style="width:14px;display:inline-block;flex-shrink:0;margin-right:4px;"></span>`;
+
+            // Start/end dates
+            const ds=d.start?d.start.slice(0,10):'—', de=d.end?d.end.slice(0,10):'—';
+            const fmtShort=s=>{ if(!s||s==='—')return'—'; const p=s.split('-'); return `${p[2]}/${p[1]}`; };
+            const dur=(d.start&&d.end)?(()=>{const s=new Date(d.start),e=new Date(d.end);let c=0,cur=new Date(s);while(cur<=e){if(cur.getDay()!==0&&cur.getDay()!==6)c++;cur.setDate(cur.getDate()+1);}return c+'j';})():'—';
+
+            // Progress bar
+            // Status badge (missions only)
+            let stBadge='';
+            if(isMission){
+              const stL={completed:'✓ Terminé',late:'⚠ Retard',inprogress:'● En cours',planned:'○ Planifié'};
+              const stC={completed:'#15803d',late:'#dc2626',inprogress:'#7c3aed',planned:'#64748b'};
+              const stBg={completed:'#dcfce7',late:'#fee2e2',inprogress:'#f3e8ff',planned:'#f1f5f9'};
+              stBadge=`<span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;background:${stBg[missionStatus]||'#f1f5f9'};color:${stC[missionStatus]||'#64748b'};white-space:nowrap;flex-shrink:0;">${stL[missionStatus]||''}</span>`;
+            }
+
+            // Edit/del buttons (missions only)
+            let editBtns='';
+            if(isMission){
+              const mIdx=GANTT_MISSIONS.findIndex(m=>m.id===row.id);
+              editBtns=`<button class="btn gantt-mission-edit-btn" data-missionidx="${mIdx}" style="padding:1px 5px;font-size:10px;flex-shrink:0;margin-left:2px;" title="Modifier">✏️</button>
+                        <button class="btn gantt-mission-del-btn"  data-missionidx="${mIdx}" style="padding:1px 5px;font-size:10px;flex-shrink:0;background:rgba(239,68,68,.08);color:#ef4444;border-color:rgba(239,68,68,.2);" title="Supprimer">🗑</button>`;
+            }
+
+            const borderBot=isMission?'2px solid var(--border2)':'1px solid var(--border)';
+
+            const leftRowHtml=`
+              <div style="display:flex;height:${RH}px;border-bottom:${borderBot};border-left:3px solid ${lBorderColor};background:${rowBg};cursor:pointer;transition:background .1s;" class="gantt-excel-row" data-rowid="${row.id}">
+                <div style="width:28px;flex-shrink:0;border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-dim);font-family:var(--mono);">${ri+1}</div>
+                <div style="flex:2;border-right:1px solid var(--border);display:flex;align-items:center;padding:0 6px 0 ${6+indent}px;overflow:hidden;gap:3px;min-width:0;">
+                  ${toggleHtml}
+                  <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:${isMission?'12.5':isSub?'11':'12'}px;font-weight:${isMission?'700':isTask?'600':'400'};color:${isMile?'var(--yellow)':isSub?'var(--text-muted)':'var(--text)'};" title="${d.title}">${d.title}</span>
+                  ${stBadge}${editBtns}
+                </div>
+                <div style="width:70px;flex-shrink:0;border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-family:var(--mono);color:var(--text-muted);">${fmtShort(ds)}</div>
+                <div style="width:70px;flex-shrink:0;border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-family:var(--mono);color:var(--text-muted);">${fmtShort(de)}</div>
+                <div style="width:50px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--text-muted);">${dur}</div>
+              </div>`;
+            $left.append(leftRowHtml);
+
+            /* ── RIGHT cell (timeline bars) ── */
+            // Today column highlight + vertical line
+            let todayHighlight='', todayLine='';
+            if(todayX>=0&&todayX<days.length){
+              const tx=todayX*DW;
+              todayHighlight=`<div style="position:absolute;left:${tx}px;top:0;width:${DW}px;height:100%;background:rgba(0,112,242,.06);pointer-events:none;z-index:1;"></div>`;
+              todayLine=`<div style="position:absolute;left:${tx+DW/2-1}px;top:0;width:2px;height:100%;background:#ef4444;opacity:.6;z-index:5;pointer-events:none;border-radius:1px;"></div>`;
+            }
+
+            // Weekend columns
+            let wkendHtml='';
+            days.forEach((dd,di)=>{
+              const dow=dd.getDay();
+              if(dow===0||dow===6){
+                wkendHtml+=`<div style="position:absolute;left:${di*DW}px;top:0;width:${DW}px;height:100%;background:rgba(0,0,0,.025);pointer-events:none;z-index:0;"></div>`;
+              }
+            });
+
+            // Gantt bar
+            let barHtml='';
+            if(isMile){
+              const ms=parseD(d.start);
+              const colIdx=diffDays(bounds.start,ms);
+              if(colIdx>=0&&colIdx<days.length){
+                const cx=colIdx*DW+DW/2, sz=12, ml=cx-sz/2, mt=(RH-sz)/2;
+                barHtml=`<div style="position:absolute;left:${ml}px;top:${mt}px;width:${sz}px;height:${sz}px;background:var(--yellow);transform:rotate(45deg);border:2px solid #fff;border-radius:2px;box-shadow:0 1px 4px rgba(196,125,0,.4);z-index:4;cursor:pointer;"></div>
+                          <div style="position:absolute;left:${cx+sz/2+6}px;top:${(RH-12)/2}px;font-size:9px;font-weight:600;color:var(--yellow);white-space:nowrap;pointer-events:none;z-index:3;">${d.title}</div>`;
+              }
+            } else if(d.start&&d.end){
+              const ds2=parseD(d.start), de2=parseD(d.end);
+              const x=diffDays(bounds.start,ds2)*DW;
+              const w=Math.max((diffDays(ds2,de2)+1)*DW, DW);
+              const prog2=d.progress||0;
+              // Bar height & style per type — GanttExcel-inspired: full-width rounded pill
+              let barH, barTop, gradient, radius='5px';
+              if(isMission){
+                barH=26; barTop=(RH-26)/2;
+                if(missionStatus==='completed')  gradient='linear-gradient(90deg,#15803d,#22c55e)';
+                else if(missionStatus==='late')       gradient='linear-gradient(90deg,#dc2626,#f87171)';
+                else if(missionStatus==='planned')    gradient='linear-gradient(90deg,#475569,#94a3b8)';
+                else                                  gradient='linear-gradient(90deg,#1d4ed8,#3b82f6)';
+              } else if(isTask){
+                barH=18; barTop=(RH-18)/2;
+                gradient='linear-gradient(90deg,#0f766e,#10b981)';
+              } else {
+                barH=12; barTop=(RH-12)/2;
+                gradient='linear-gradient(90deg,#6366f1,#a5b4fc)';
+              }
+              // Late stripes
+              const lStripe=(isMission&&missionStatus==='late')
+                ?`<div style="position:absolute;inset:0;background:repeating-linear-gradient(-45deg,transparent,transparent 4px,rgba(255,255,255,.1) 4px,rgba(255,255,255,.1) 8px);border-radius:${radius};pointer-events:none;"></div>`:'';
+              // Label inside bar
+              const barLabel=w>60?`<span style="position:relative;z-index:2;padding:0 8px;font-size:10px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.3);">${d.title}</span>`:'';
+              barHtml=`
+                <div style="position:absolute;left:${x}px;top:${barTop}px;width:${w}px;height:${barH}px;background:${gradient};border-radius:${radius};display:flex;align-items:center;overflow:hidden;cursor:pointer;z-index:3;box-shadow:0 1px 6px rgba(0,0,0,.18);transition:filter .12s;" data-rowid="${row.id}">
+                  ${lStripe}${barLabel}
+                </div>`;
+            }
+
+            const rightRowHtml=`
+              <div style="height:${RH}px;width:${totalW}px;position:relative;border-bottom:${borderBot};background:${rowBg};">
+                ${wkendHtml}
+                ${todayHighlight}
+                ${barHtml}
+                ${todayLine}
+              </div>`;
+            $right.append(rightRowHtml);
+            $('#gantt-excel-rows-right').css('width', totalW+'px');
+
+            if(todayX>=0&&todayX<days.length){
+              const scrollTarget=todayX*DW-200;
+              requestAnimationFrame(()=>{
+                const scroller=document.getElementById('gantt-scroll');
+                if(scroller) scroller.scrollLeft=Math.max(0,scrollTarget);
+              });
+            }
+          });
+        } else {
+            console.log(response.message);
+        }
+    },
+
+    error: function(xhr) {
+        console.log("Erreur AJAX :", xhr.responseText);
     }
+});
 
-    const isCollapsed=!!ganttCollapsed[row.id];
-    const hasChildren=row.type==='mission'||(row.type==='task'&&(d.subtasks||[]).length>0);
-    let missionStatus='';
-    if(row.type==='mission') missionStatus=ganttStatusOf(d);
-
-    /* ── LEFT cell (spreadsheet columns) ── */
-    const isMission=row.type==='mission';
-    const isTask=row.type==='task';
-    const isSub=row.type==='subtask';
-    const isMile=row.type==='milestone';
-
-    // Row background alternation + status
-    let rowBg='';
-    if(isMission){
-      if(missionStatus==='completed')  rowBg='#f0fdf4';
-      else if(missionStatus==='late')       rowBg='#fff5f5';
-      else if(missionStatus==='planned')    rowBg='#f8fafc';
-      else                                  rowBg='#eff6ff';
-    } else {
-      rowBg = ri%2===0?'var(--surface)':'var(--surface2)';
-    }
-
-    // Left border color per type
-    const lBorderColor=isMission
-      ? (missionStatus==='late'     ?'#ef4444'
-        :missionStatus==='completed'?'#22c55e'
-        :missionStatus==='planned'  ?'#94a3b8'
-        :'#3b82f6')
-      : isTask?'#10b981':isSub?'#6366f1':'#f59e0b';
-
-    // Indent
-    const indent=isMission?0:isTask?16:isSub?30:16;
-
-    // Toggle button
-    const toggleHtml=hasChildren
-      ?`<span class="gantt-row-toggle" data-rowid="${row.id}" style="width:14px;height:14px;border-radius:3px;background:${isMission?'rgba(59,130,246,.15)':'var(--surface3)'};border:1px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:8px;cursor:pointer;flex-shrink:0;color:var(--text-muted);margin-right:4px;">${isCollapsed?'▶':'▼'}</span>`
-      :`<span style="width:14px;display:inline-block;flex-shrink:0;margin-right:4px;"></span>`;
-
-    // Start/end dates
-    const ds=d.start?d.start.slice(0,10):'—', de=d.end?d.end.slice(0,10):'—';
-    const fmtShort=s=>{ if(!s||s==='—')return'—'; const p=s.split('-'); return `${p[2]}/${p[1]}`; };
-    const dur=(d.start&&d.end)?(()=>{const s=new Date(d.start),e=new Date(d.end);let c=0,cur=new Date(s);while(cur<=e){if(cur.getDay()!==0&&cur.getDay()!==6)c++;cur.setDate(cur.getDate()+1);}return c+'j';})():'—';
-
-    // Progress bar
-    // Status badge (missions only)
-    let stBadge='';
-    if(isMission){
-      const stL={completed:'✓ Terminé',late:'⚠ Retard',inprogress:'● En cours',planned:'○ Planifié'};
-      const stC={completed:'#15803d',late:'#dc2626',inprogress:'#7c3aed',planned:'#64748b'};
-      const stBg={completed:'#dcfce7',late:'#fee2e2',inprogress:'#f3e8ff',planned:'#f1f5f9'};
-      stBadge=`<span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;background:${stBg[missionStatus]||'#f1f5f9'};color:${stC[missionStatus]||'#64748b'};white-space:nowrap;flex-shrink:0;">${stL[missionStatus]||''}</span>`;
-    }
-
-    // Edit/del buttons (missions only)
-    let editBtns='';
-    if(isMission){
-      const mIdx=GANTT_MISSIONS.findIndex(m=>m.id===row.id);
-      editBtns=`<button class="btn gantt-mission-edit-btn" data-missionidx="${mIdx}" style="padding:1px 5px;font-size:10px;flex-shrink:0;margin-left:2px;" title="Modifier">✏️</button>
-                <button class="btn gantt-mission-del-btn"  data-missionidx="${mIdx}" style="padding:1px 5px;font-size:10px;flex-shrink:0;background:rgba(239,68,68,.08);color:#ef4444;border-color:rgba(239,68,68,.2);" title="Supprimer">🗑</button>`;
-    }
-
-    const borderBot=isMission?'2px solid var(--border2)':'1px solid var(--border)';
-
-    const leftRowHtml=`
-      <div style="display:flex;height:${RH}px;border-bottom:${borderBot};border-left:3px solid ${lBorderColor};background:${rowBg};cursor:pointer;transition:background .1s;" class="gantt-excel-row" data-rowid="${row.id}">
-        <div style="width:28px;flex-shrink:0;border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-dim);font-family:var(--mono);">${ri+1}</div>
-        <div style="flex:2;border-right:1px solid var(--border);display:flex;align-items:center;padding:0 6px 0 ${6+indent}px;overflow:hidden;gap:3px;min-width:0;">
-          ${toggleHtml}
-          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:${isMission?'12.5':isSub?'11':'12'}px;font-weight:${isMission?'700':isTask?'600':'400'};color:${isMile?'var(--yellow)':isSub?'var(--text-muted)':'var(--text)'};" title="${d.title}">${d.title}</span>
-          ${stBadge}${editBtns}
-        </div>
-        <div style="width:70px;flex-shrink:0;border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-family:var(--mono);color:var(--text-muted);">${fmtShort(ds)}</div>
-        <div style="width:70px;flex-shrink:0;border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-family:var(--mono);color:var(--text-muted);">${fmtShort(de)}</div>
-        <div style="width:50px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--text-muted);">${dur}</div>
-      </div>`;
-    $left.append(leftRowHtml);
-
-    /* ── RIGHT cell (timeline bars) ── */
-    // Today column highlight + vertical line
-    let todayHighlight='', todayLine='';
-    if(todayX>=0&&todayX<days.length){
-      const tx=todayX*DW;
-      todayHighlight=`<div style="position:absolute;left:${tx}px;top:0;width:${DW}px;height:100%;background:rgba(0,112,242,.06);pointer-events:none;z-index:1;"></div>`;
-      todayLine=`<div style="position:absolute;left:${tx+DW/2-1}px;top:0;width:2px;height:100%;background:#ef4444;opacity:.6;z-index:5;pointer-events:none;border-radius:1px;"></div>`;
-    }
-
-    // Weekend columns
-    let wkendHtml='';
-    days.forEach((dd,di)=>{
-      const dow=dd.getDay();
-      if(dow===0||dow===6){
-        wkendHtml+=`<div style="position:absolute;left:${di*DW}px;top:0;width:${DW}px;height:100%;background:rgba(0,0,0,.025);pointer-events:none;z-index:0;"></div>`;
-      }
-    });
-
-    // Gantt bar
-    let barHtml='';
-    if(isMile){
-      const ms=parseD(d.start);
-      const colIdx=diffDays(bounds.start,ms);
-      if(colIdx>=0&&colIdx<days.length){
-        const cx=colIdx*DW+DW/2, sz=12, ml=cx-sz/2, mt=(RH-sz)/2;
-        barHtml=`<div style="position:absolute;left:${ml}px;top:${mt}px;width:${sz}px;height:${sz}px;background:var(--yellow);transform:rotate(45deg);border:2px solid #fff;border-radius:2px;box-shadow:0 1px 4px rgba(196,125,0,.4);z-index:4;cursor:pointer;"></div>
-                  <div style="position:absolute;left:${cx+sz/2+6}px;top:${(RH-12)/2}px;font-size:9px;font-weight:600;color:var(--yellow);white-space:nowrap;pointer-events:none;z-index:3;">${d.title}</div>`;
-      }
-    } else if(d.start&&d.end){
-      const ds2=parseD(d.start), de2=parseD(d.end);
-      const x=diffDays(bounds.start,ds2)*DW;
-      const w=Math.max((diffDays(ds2,de2)+1)*DW, DW);
-      const prog2=d.progress||0;
-      // Bar height & style per type — GanttExcel-inspired: full-width rounded pill
-      let barH, barTop, gradient, radius='5px';
-      if(isMission){
-        barH=26; barTop=(RH-26)/2;
-        if(missionStatus==='completed')  gradient='linear-gradient(90deg,#15803d,#22c55e)';
-        else if(missionStatus==='late')       gradient='linear-gradient(90deg,#dc2626,#f87171)';
-        else if(missionStatus==='planned')    gradient='linear-gradient(90deg,#475569,#94a3b8)';
-        else                                  gradient='linear-gradient(90deg,#1d4ed8,#3b82f6)';
-      } else if(isTask){
-        barH=18; barTop=(RH-18)/2;
-        gradient='linear-gradient(90deg,#0f766e,#10b981)';
-      } else {
-        barH=12; barTop=(RH-12)/2;
-        gradient='linear-gradient(90deg,#6366f1,#a5b4fc)';
-      }
-      // Late stripes
-      const lStripe=(isMission&&missionStatus==='late')
-        ?`<div style="position:absolute;inset:0;background:repeating-linear-gradient(-45deg,transparent,transparent 4px,rgba(255,255,255,.1) 4px,rgba(255,255,255,.1) 8px);border-radius:${radius};pointer-events:none;"></div>`:'';
-      // Label inside bar
-      const barLabel=w>60?`<span style="position:relative;z-index:2;padding:0 8px;font-size:10px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.3);">${d.title}</span>`:'';
-      barHtml=`
-        <div style="position:absolute;left:${x}px;top:${barTop}px;width:${w}px;height:${barH}px;background:${gradient};border-radius:${radius};display:flex;align-items:center;overflow:hidden;cursor:pointer;z-index:3;box-shadow:0 1px 6px rgba(0,0,0,.18);transition:filter .12s;" data-rowid="${row.id}">
-          ${lStripe}${barLabel}
-        </div>`;
-    }
-
-    const rightRowHtml=`
-      <div style="height:${RH}px;width:${totalW}px;position:relative;border-bottom:${borderBot};background:${rowBg};">
-        ${wkendHtml}
-        ${todayHighlight}
-        ${barHtml}
-        ${todayLine}
-      </div>`;
-    $right.append(rightRowHtml);
-  });
-
-  // Set right panel width
-  $('#gantt-excel-rows-right').css('width', totalW+'px');
-
-  // Scroll to today
-  if(todayX>=0&&todayX<days.length){
-    const scrollTarget=todayX*DW-200;
-    requestAnimationFrame(()=>{
-      const scroller=document.getElementById('gantt-scroll');
-      if(scroller) scroller.scrollLeft=Math.max(0,scrollTarget);
-    });
-  }
 }
 
 // ── Widget Zoom ──────────────────────────────────────────────
@@ -9455,10 +9447,41 @@ $(document).on('click','.gantt-mission-del-btn',function(e){
   const m=GANTT_MISSIONS[idx];
   if(!m) return;
   if(!confirm(`Supprimer la mission "${m.title}" ?\nCette action est irréversible.`)) return;
-  GANTT_MISSIONS.splice(idx,1);
-  renderGantt();
-  dbSave();
-  toast('success','🗑','Mission supprimée');
+
+    const dataDelete = {
+        action: 'supprimer',
+        id: m.id
+    };
+  
+    $.ajax({
+      url: "/DAC/php/mission/actions.php",
+      type: "POST",
+      data: dataDelete,
+      dataType: "json",
+
+      success: function(response){
+          console.log(response);
+          if(response.success){  
+              GANTT_MISSIONS.splice(idx,1);
+              renderGantt();
+              
+              toast('success','🗑','Mission supprimée');
+          }else{
+
+              toast('error','Erreur',response.message);
+          }
+      },
+
+      error:function(xhr,status,error){
+
+          console.log("Status :",status);
+          console.log("Erreur :",error);
+          console.log("Réponse :",xhr.responseText);
+
+          alert("Erreur serveur : "+xhr.status);
+      }
+  });
+ 
 });
 
 $(document).on('click','.cfg-tab',function(){
@@ -12315,201 +12338,219 @@ let dailyGroupByMission = true;
 let dailyGroupCollapsed = {};
 
 function renderDailyTasks(){
-  const today = new Date(); today.setHours(0,0,0,0);
-  const fSt      = $('#daily-f-statut').val()||'';
-  const fPrio    = $('#daily-f-prio').val()||'';
-  const fResp    = $('#daily-f-resp').val()||'';
-  const fType    = $('#daily-f-type').val()||'';
-  const fSoc     = $('#daily-f-soc').val()||'';
+  $.ajax({
+    url: "/DAC/php/tache_quotidienne/actions.php",
+    type: "POST",
+    dataType: "json",
+    data: { action: "lister" },
 
-  // ── Alimenter le filtre Société ──────────────────────────────
-  const $fsoc = $('#daily-f-soc');
-  const prevSoc = $fsoc.val();
-  $fsoc.find('option:not(:first-child)').remove();
-  const socs = [...new Set(DAILY_TASKS.map(t=>t.societe).filter(Boolean))].sort();
-  // Compléter avec les sociétés globales qui n'ont pas encore de tâches
-  (SOCIETES||[]).forEach(s=>{ if(s.nom && !socs.includes(s.nom)) socs.push(s.nom); });
-  socs.sort().forEach(s=>$fsoc.append(`<option value="${s}">🏢 ${s}</option>`));
-  if(prevSoc) $fsoc.val(prevSoc);
-
-
-  const $fr = $('#daily-f-resp');
-  const prevResp = $fr.val();
-  $fr.find('option:not(:first-child)').remove();
-  const resps = [...new Set(DAILY_TASKS.map(t=>t.responsable).filter(Boolean))].sort();
-  resps.forEach(r=>$fr.append(`<option value="${r}">${r}</option>`));
-  if(prevResp) $fr.val(prevResp);
-
-  $('#daily-group-toggle').css({
-    background: dailyGroupByMission ? 'var(--accent-bg)' : 'var(--surface)',
-    borderColor: dailyGroupByMission ? 'var(--accent)' : 'var(--border)',
-  });
-  $('#daily-group-label').css('color', dailyGroupByMission ? 'var(--accent)' : 'var(--text-muted)');
-  $('#daily-group-icon').text(dailyGroupByMission ? '▤' : '☰');
-
-  const filtered = DAILY_TASKS.filter(t=>{
-    if(fSt   && t.statut    !== fSt)   return false;
-    if(fPrio && t.priorite  !== fPrio) return false;
-    if(fResp && t.responsable !== fResp) return false;
-    if(fSoc  && (t.societe||'') !== fSoc) return false;
-    if(fType === 'permanent'  && !t.permanent)   return false;
-    if(fType === 'ponctuelle' && t.permanent) return false;
-    return true;
-  });
-
-  const nDailyOverdue = DAILY_TASKS.filter(t=>{ if(t.statut==='done') return false; const d=new Date(t.date); const tod=new Date(); tod.setHours(0,0,0,0); return !isNaN(d)&&d<tod; }).length;
-  $('#nb-daily').text(nDailyOverdue||DAILY_TASKS.length);
-  const nPerm  = DAILY_TASKS.filter(t=>t.permanent).length;
-  let countTxt = filtered.length + ' tâche' + (filtered.length>1?'s':'');
-  if(nPerm>0)  countTxt += ' · 📌 '+nPerm+' permanente'+(nPerm>1?'s':'');
-  $('#daily-count').text(countTxt);
-
-  const $tb = $('#daily-tbody').empty();
-  if(!filtered.length){
-    $tb.html('<tr><td colspan="12" class="nodata">Aucune tâche. Ajustez les filtres ou cliquez « + Nouvelle tâche ».</td></tr>');
-    return;
-  }
-
-  function renderRow(t){
-    const realIdx = DAILY_TASKS.indexOf(t);
-    const sc  = DAILY_ST_CFG[t.statut]  || DAILY_ST_CFG.todo;
-    const pc  = PRIO_CFG[t.priorite]    || PRIO_CFG.medium;
-    const av  = t.avancement||0;
-    const isDone = t.statut==='done';
-
-    let retardTag = '';
-    if(t.date && t.statut !== 'done' && !t.permanent){
-      const d = new Date(t.date);
-      if(!isNaN(d) && d < today){
-        const diff = Math.floor((today-d)/86400000);
-        retardTag = `<span style="font-size:9px;background:#fee2e2;color:#991b1b;border-radius:3px;padding:1px 5px;font-weight:700;margin-left:4px;">+${diff}j</span>`;
+    success: function(response) {
+      if (!response.success) {
+        console.log(response.message);
+        return;
       }
-    }
 
-    const typeBadge = t.permanent
-      ? `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#ede9fe;color:#5b21b6;white-space:nowrap;">📌 Perm.</span>`
-      : `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;background:var(--surface3);color:var(--text-muted);white-space:nowrap;">📋</span>`;
+      DAILY_TASKS = response.data;
 
+      const today = new Date(); today.setHours(0,0,0,0);
+      const fSt    = $('#daily-f-statut').val() || '';
+      const fPrio  = $('#daily-f-prio').val()   || '';
+      const fResp  = $('#daily-f-resp').val()   || '';
+      const fType  = $('#daily-f-type').val()   || '';
+      const fSoc   = $('#daily-f-soc').val()    || '';
 
-    const cbStyle = isDone
-      ? 'width:18px;height:18px;border-radius:4px;background:var(--green);border:2px solid var(--green);cursor:pointer;display:grid;place-items:center;font-size:11px;color:#fff;flex-shrink:0;'
-      : 'width:18px;height:18px;border-radius:4px;background:transparent;border:2px solid var(--border2);cursor:pointer;display:grid;place-items:center;flex-shrink:0;';
+      // ── Alimenter le filtre Société ──────────────────────────────
+      const $fsoc = $('#daily-f-soc');
+      const prevSoc = $fsoc.val();
+      $fsoc.find('option:not(:first-child)').remove();
+      const socs = [...new Set(DAILY_TASKS.map(t=>t.societe).filter(Boolean))].sort();
+      (SOCIETES||[]).forEach(s=>{ if(s.nom && !socs.includes(s.nom)) socs.push(s.nom); });
+      socs.sort().forEach(s=>$fsoc.append(`<option value="${s}">🏢 ${s}</option>`));
+      if(prevSoc) $fsoc.val(prevSoc);
 
-    const rowBg = t.permanent
-      ? `background:linear-gradient(90deg,#f5f3ff 0%,transparent 60%);`
-      : '';
-    const rowStyle = rowBg + (isDone?'opacity:.6;':'');
+      const $fr = $('#daily-f-resp');
+      const prevResp = $fr.val();
+      $fr.find('option:not(:first-child)').remove();
+      const resps = [...new Set(DAILY_TASKS.map(t=>t.responsable).filter(Boolean))].sort();
+      resps.forEach(r=>$fr.append(`<option value="${r}">${r}</option>`));
+      if(prevResp) $fr.val(prevResp);
 
-    const titre = t.titre;
+      $('#daily-group-toggle').css({
+        background: dailyGroupByMission ? 'var(--accent-bg)' : 'var(--surface)',
+        borderColor: dailyGroupByMission ? 'var(--accent)' : 'var(--border)',
+      });
+      $('#daily-group-label').css('color', dailyGroupByMission ? 'var(--accent)' : 'var(--text-muted)');
+      $('#daily-group-icon').text(dailyGroupByMission ? '▤' : '☰');
 
-    const dateCell = t.permanent
-      ? (()=>{ const lbl=recurrenceLabel(t); const nxt=nextOccurrence(t); const nxtStr=nxt?'<br><span style="font-size:9.5px;color:#7c3aed;opacity:.85;">▸ '+fmtDate(nxt)+'</span>':''; return `<span style="color:#7c3aed;font-weight:600;">${lbl}</span>${nxtStr}`; })()
-      : `<span style="font-family:var(--mono)">${t.date||'—'}</span>`;
+      const filtered = DAILY_TASKS.filter(t=>{
+        if(fSt   && t.statut      !== fSt)   return false;
+        if(fPrio && t.priorite    !== fPrio) return false;
+        if(fResp && t.responsable !== fResp) return false;
+        if(fSoc  && (t.societe||'') !== fSoc) return false;
+        if(fType === 'permanent'  && !t.permanent) return false;
+        if(fType === 'ponctuelle' && t.permanent)  return false;
+        return true;
+      });
 
-    return `<tr style="${rowStyle}">
-      <td class="t-center">
-        <div class="daily-toggle-done" data-idx="${realIdx}" style="${cbStyle}" title="Marquer ${isDone?'À faire':'Terminé'}">${isDone?'✓':''}</div>
-      </td>
-      <td style="font-size:12px;font-weight:${isDone?'400':'600'};${isDone?'text-decoration:line-through;color:var(--text-muted);':''}">${titre}${retardTag}</td>
-      <td>${typeBadge}</td>
-      <td><span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;background:${pc.bg};color:${pc.c};">${pc.label}</span></td>
-      <td style="font-size:11px;">${t.responsable||'—'}</td>
-      <td style="font-size:11px;">${t.societe ? `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:500;background:var(--purple-bg);color:var(--purple);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;" title="${t.societe}">🏢 ${t.societe}</span>` : '<span style="color:var(--text-dim);font-size:11px;">—</span>'}</td>
-      <td style="font-size:10.5px;color:var(--text-muted);">${dateCell}</td>
-      <td><span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;background:${sc.bg};color:${sc.c};white-space:nowrap;">${sc.label}</span></td>
-      <td style="min-width:90px;">
-        <div style="display:flex;align-items:center;gap:4px;">
-          <div style="flex:1;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;"><div style="width:${av}%;height:100%;background:${av>=80?'var(--green)':av>=40?'var(--accent)':'var(--yellow)'};border-radius:2px;transition:width .4s;"></div></div>
-          <span style="font-size:10px;color:var(--text-muted);width:28px;font-family:var(--mono);text-align:right;">${av}%</span>
-        </div>
-      </td>
-      <td style="font-size:11px;font-family:var(--mono);color:var(--text-muted);white-space:nowrap;">${(t.duree_heures!==undefined&&t.duree_heures!==null&&t.duree_heures!=='')?'⏱️ '+t.duree_heures+'h':'—'}</td>
-      <td style="font-size:11px;color:var(--text-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(t.notes||'').replace(/"/g,'&quot;')}">${t.notes||'—'}</td>
-      <td style="white-space:nowrap;">
-        <button class="btn daily-edit-btn" data-idx="${realIdx}" style="padding:1px 6px;font-size:10px;">✏️</button>
-        <button class="btn daily-prog-btn" data-idx="${realIdx}" style="padding:1px 6px;font-size:10px;" title="Avancement">📊</button>
-        <button class="btn daily-del-btn"  data-idx="${realIdx}" style="padding:1px 6px;font-size:10px;color:var(--red);">✕</button>
-      </td>
-    </tr>`;
-  }
+      const nDailyOverdue = DAILY_TASKS.filter(t=>{
+        if(t.statut==='done') return false;
+        const d = new Date(t.date);
+        return !isNaN(d) && d < today;
+      }).length;
+      $('#nb-daily').text(nDailyOverdue || DAILY_TASKS.length);
 
-  // ── MODE REGROUPÉ PAR MISSION ─────────────────────────────────
-  if(dailyGroupByMission){
-    // Construire des groupes : clé = ganttMissionId ou '__other__' ou '__permanent__'
-    const groups = {};
+      const nPerm = DAILY_TASKS.filter(t=>t.permanent).length;
+      let countTxt = filtered.length + ' tâche' + (filtered.length>1?'s':'');
+      if(nPerm>0) countTxt += ' · 📌 '+nPerm+' permanente'+(nPerm>1?'s':'');
+      $('#daily-count').text(countTxt);
 
-    const permTasks = filtered.filter(t=>t.permanent);
-    if(permTasks.length){
-      groups['__permanent__'] = { label:'📌 Tâches Permanentes', color:'#7c3aed', bg:'#ede9fe', tasks: permTasks, icon:'📌' };
-    }
+      const $tb = $('#daily-tbody').empty();
+      if(!filtered.length){
+        $tb.html('<tr><td colspan="12" class="nodata">Aucune tâche. Ajustez les filtres ou cliquez « + Nouvelle tâche ».</td></tr>');
+        return;
+      }
 
-    // Groupe tâches ponctuelles
-    const otherTasks = filtered.filter(t=>!t.permanent);
-    if(otherTasks.length){
-      groups['__other__'] = { label:'📋 Tâches Ponctuelles', color:'#6b7785', bg:'var(--surface3)', tasks: otherTasks, icon:'📋' };
-    }
+      // ── renderRow : fonction PURE, se ferme juste après son return ──
+      function renderRow(t){
+        const realIdx = DAILY_TASKS.indexOf(t);
+        const sc  = DAILY_ST_CFG[t.statut]  || DAILY_ST_CFG.todo;
+        const pc  = PRIO_CFG[t.priorite]    || PRIO_CFG.medium;
+        const av  = t.avancement||0;
+        const isDone = t.statut==='done';
 
-    if(!Object.keys(groups).length){
-      $tb.html('<tr><td colspan="12" class="nodata">Aucune tâche.</td></tr>');
-      return;
-    }
+        let retardTag = '';
+        if(t.date && t.statut !== 'done' && !t.permanent){
+          const d = new Date(t.date);
+          if(!isNaN(d) && d < today){
+            const diff = Math.floor((today-d)/86400000);
+            retardTag = `<span style="font-size:9px;background:#fee2e2;color:#991b1b;border-radius:3px;padding:1px 5px;font-weight:700;margin-left:4px;">+${diff}j</span>`;
+          }
+        }
 
-    Object.entries(groups).forEach(([gKey, g])=>{
-      const isCollapsed = !!dailyGroupCollapsed[gKey];
-      const nDone  = g.tasks.filter(t=>t.statut==='done').length;
-      const nTotal = g.tasks.length;
-      const gProg  = nTotal ? Math.round((nDone/nTotal)*100) : 0;
-      const nOverdue = g.tasks.filter(t=>{ if(t.statut==='done'||t.permanent) return false; const d=new Date(t.date); return !isNaN(d)&&d<today; }).length;
+        const typeBadge = t.permanent
+          ? `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#ede9fe;color:#5b21b6;white-space:nowrap;">📌 Perm.</span>`
+          : `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;background:var(--surface3);color:var(--text-muted);white-space:nowrap;">📋</span>`;
 
-      const overdueTag = nOverdue>0
-        ? `<span style="font-size:9px;background:#fee2e2;color:#991b1b;border-radius:3px;padding:1px 5px;font-weight:700;">⚠ ${nOverdue} retard${nOverdue>1?'s':''}</span>`
-        : '';
-      const chefTag = g.chef
-        ? `<span style="font-size:10px;color:var(--text-muted);margin-left:6px;">👤 ${g.chef}</span>` : '';
-      const socTag  = g.societe
-        ? `<span style="font-size:10px;color:var(--text-muted);margin-left:4px;">· 🏢 ${g.societe}</span>` : '';
+        const cbStyle = isDone
+          ? 'width:18px;height:18px;border-radius:4px;background:var(--green);border:2px solid var(--green);cursor:pointer;display:grid;place-items:center;font-size:11px;color:#fff;flex-shrink:0;'
+          : 'width:18px;height:18px;border-radius:4px;background:transparent;border:2px solid var(--border2);cursor:pointer;display:grid;place-items:center;flex-shrink:0;';
 
-      $tb.append(`<tr class="daily-group-hdr" data-gkey="${gKey}" style="cursor:pointer;user-select:none;">
-        <td colspan="12" style="padding:0;">
-          <div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:${g.bg};border-bottom:2px solid ${g.color};border-top:2px solid var(--border);">
-            <span style="font-size:11px;color:${g.color};font-weight:700;transition:transform .2s;display:inline-block;transform:rotate(${isCollapsed?'-90deg':'0deg'});">▼</span>
-            <span style="font-size:12.5px;font-weight:700;color:var(--text);">${g.label}</span>
-            ${chefTag}${socTag}
-            <span style="font-size:10px;color:var(--text-muted);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1px 8px;margin-left:4px;">${nDone}/${nTotal}</span>
-            ${overdueTag}
-            <div style="flex:1;max-width:120px;height:5px;background:rgba(0,0,0,.1);border-radius:3px;overflow:hidden;margin-left:8px;">
-              <div style="width:${gProg}%;height:100%;background:${g.color};border-radius:3px;transition:width .4s;"></div>
+        const rowBg = t.permanent
+          ? `background:linear-gradient(90deg,#f5f3ff 0%,transparent 60%);`
+          : '';
+        const rowStyle = rowBg + (isDone?'opacity:.6;':'');
+
+        const titre = t.titre;
+
+        const dateCell = t.permanent
+          ? (()=>{ const lbl=recurrenceLabel(t); const nxt=nextOccurrence(t); const nxtStr=nxt?'<br><span style="font-size:9.5px;color:#7c3aed;opacity:.85;">▸ '+fmtDate(nxt)+'</span>':''; return `<span style="color:#7c3aed;font-weight:600;">${lbl}</span>${nxtStr}`; })()
+          : `<span style="font-family:var(--mono)">${t.date||'—'}</span>`;
+
+        return `<tr style="${rowStyle}">
+          <td class="t-center">
+            <div class="daily-toggle-done" data-idx="${realIdx}" style="${cbStyle}" title="Marquer ${isDone?'À faire':'Terminé'}">${isDone?'✓':''}</div>
+          </td>
+          <td style="font-size:12px;font-weight:${isDone?'400':'600'};${isDone?'text-decoration:line-through;color:var(--text-muted);':''}">${titre}${retardTag}</td>
+          <td>${typeBadge}</td>
+          <td><span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;background:${pc.bg};color:${pc.c};">${pc.label}</span></td>
+          <td style="font-size:11px;">${t.responsable||'—'}</td>
+          <td style="font-size:11px;">${t.societe ? `<span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:500;background:var(--purple-bg);color:var(--purple);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;" title="${t.societe}">🏢 ${t.societe}</span>` : '<span style="color:var(--text-dim);font-size:11px;">—</span>'}</td>
+          <td style="font-size:10.5px;color:var(--text-muted);">${dateCell}</td>
+          <td><span style="display:inline-block;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;background:${sc.bg};color:${sc.c};white-space:nowrap;">${sc.label}</span></td>
+          <td style="min-width:90px;">
+            <div style="display:flex;align-items:center;gap:4px;">
+              <div style="flex:1;height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;"><div style="width:${av}%;height:100%;background:${av>=80?'var(--green)':av>=40?'var(--accent)':'var(--yellow)'};border-radius:2px;transition:width .4s;"></div></div>
+              <span style="font-size:10px;color:var(--text-muted);width:28px;font-family:var(--mono);text-align:right;">${av}%</span>
             </div>
-            <span style="font-size:10px;font-weight:700;color:${g.color};font-family:var(--mono);">${gProg}%</span>
-          </div>
-        </td>
-      </tr>`);
+          </td>
+          <td style="font-size:11px;font-family:var(--mono);color:var(--text-muted);white-space:nowrap;">${(t.duree_heures!==undefined&&t.duree_heures!==null&&t.duree_heures!=='')?'⏱️ '+t.duree_heures+'h':'—'}</td>
+          <td style="font-size:11px;color:var(--text-muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(t.notes||'').replace(/"/g,'&quot;')}">${t.notes||'—'}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn daily-edit-btn" data-idx="${realIdx}" style="padding:1px 6px;font-size:10px;">✏️</button>
+            <button class="btn daily-prog-btn" data-idx="${realIdx}" style="padding:1px 6px;font-size:10px;" title="Avancement">📊</button>
+            <button class="btn daily-del-btn"  data-idx="${realIdx}" style="padding:1px 6px;font-size:10px;color:var(--red);">✕</button>
+          </td>
+        </tr>`;
+      } // ← renderRow se ferme ICI, immédiatement après le return
 
-      if(!isCollapsed){
-        // Trier par date puis priorité
-        const sorted = [...g.tasks].sort((a,b)=>{
-          const prioOrder = {high:0,medium:1,low:2};
+      // ── MODE REGROUPÉ PAR MISSION ─────────────────────────────────
+      if(dailyGroupByMission){
+        const groups = {};
+
+        const permTasks = filtered.filter(t=>t.permanent);
+        if(permTasks.length){
+          groups['__permanent__'] = { label:'📌 Tâches Permanentes', color:'#7c3aed', bg:'#ede9fe', tasks: permTasks, icon:'📌' };
+        }
+
+        const otherTasks = filtered.filter(t=>!t.permanent);
+        if(otherTasks.length){
+          groups['__other__'] = { label:'📋 Tâches Ponctuelles', color:'#6b7785', bg:'var(--surface3)', tasks: otherTasks, icon:'📋' };
+        }
+
+        if(!Object.keys(groups).length){
+          $tb.html('<tr><td colspan="12" class="nodata">Aucune tâche.</td></tr>');
+          return;
+        }
+
+        Object.entries(groups).forEach(([gKey, g])=>{
+          const isCollapsed = !!dailyGroupCollapsed[gKey];
+          const nDone  = g.tasks.filter(t=>t.statut==='done').length;
+          const nTotal = g.tasks.length;
+          const gProg  = nTotal ? Math.round((nDone/nTotal)*100) : 0;
+          const nOverdue = g.tasks.filter(t=>{ if(t.statut==='done'||t.permanent) return false; const d=new Date(t.date); return !isNaN(d)&&d<today; }).length;
+
+          const overdueTag = nOverdue>0
+            ? `<span style="font-size:9px;background:#fee2e2;color:#991b1b;border-radius:3px;padding:1px 5px;font-weight:700;">⚠ ${nOverdue} retard${nOverdue>1?'s':''}</span>`
+            : '';
+          const chefTag = g.chef ? `<span style="font-size:10px;color:var(--text-muted);margin-left:6px;">👤 ${g.chef}</span>` : '';
+          const socTag  = g.societe ? `<span style="font-size:10px;color:var(--text-muted);margin-left:4px;">· 🏢 ${g.societe}</span>` : '';
+
+          $tb.append(`<tr class="daily-group-hdr" data-gkey="${gKey}" style="cursor:pointer;user-select:none;">
+            <td colspan="12" style="padding:0;">
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:${g.bg};border-bottom:2px solid ${g.color};border-top:2px solid var(--border);">
+                <span style="font-size:11px;color:${g.color};font-weight:700;transition:transform .2s;display:inline-block;transform:rotate(${isCollapsed?'-90deg':'0deg'});">▼</span>
+                <span style="font-size:12.5px;font-weight:700;color:var(--text);">${g.label}</span>
+                ${chefTag}${socTag}
+                <span style="font-size:10px;color:var(--text-muted);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1px 8px;margin-left:4px;">${nDone}/${nTotal}</span>
+                ${overdueTag}
+                <div style="flex:1;max-width:120px;height:5px;background:rgba(0,0,0,.1);border-radius:3px;overflow:hidden;margin-left:8px;">
+                  <div style="width:${gProg}%;height:100%;background:${g.color};border-radius:3px;transition:width .4s;"></div>
+                </div>
+                <span style="font-size:10px;font-weight:700;color:${g.color};font-family:var(--mono);">${gProg}%</span>
+              </div>
+            </td>
+          </tr>`);
+
+          if(!isCollapsed){
+            const sorted = [...g.tasks].sort((a,b)=>{
+              const prioOrder = {high:0,medium:1,low:2};
+              if(a.statut==='done' && b.statut!=='done') return 1;
+              if(a.statut!=='done' && b.statut==='done') return -1;
+              const da=(a.date||'9999'), db=(b.date||'9999');
+              if(da!==db) return da.localeCompare(db);
+              return (prioOrder[a.priorite]||1)-(prioOrder[b.priorite]||1);
+            });
+            sorted.forEach(t=>{ $tb.append(renderRow(t)); });
+          }
+        });
+
+      } else {
+        // ── MODE LISTE PLATE ───────────────────
+        const sorted = [...filtered].sort((a,b)=>{
+          if(a.permanent && !b.permanent) return -1;
+          if(!a.permanent && b.permanent) return 1;
           if(a.statut==='done' && b.statut!=='done') return 1;
           if(a.statut!=='done' && b.statut==='done') return -1;
-          const da=(a.date||'9999'), db=(b.date||'9999');
-          if(da!==db) return da.localeCompare(db);
-          return (prioOrder[a.priorite]||1)-(prioOrder[b.priorite]||1);
+          return (a.date||'').localeCompare(b.date||'');
         });
         sorted.forEach(t=>{ $tb.append(renderRow(t)); });
       }
-    });
+    },
 
-  } else {
-    // ── MODE LISTE PLATE (sans regroupement) ───────────────────
-    const sorted = [...filtered].sort((a,b)=>{
-      if(a.permanent && !b.permanent) return -1;
-      if(!a.permanent && b.permanent) return 1;
-      if(a.statut==='done' && b.statut!=='done') return 1;
-      if(a.statut!=='done' && b.statut==='done') return -1;
-      return (a.date||'').localeCompare(b.date||'');
-    });
-    sorted.forEach(t=>{ $tb.append(renderRow(t)); });
-  }
+    error: function(xhr) {
+      console.log("Erreur AJAX :", xhr.responseText);
+    }
+  });
 }
 
 // ── Formulaire tâche quotidienne ──
@@ -13270,8 +13311,9 @@ function openUnifiedModal(defaultTab, editContext){
       const auditRef = $('#gm-audit-ref').val()||'';
       const progress = 0;
       const status   = $('#gm-status').val()||'planned';
-      const nm = {
-        id: editMission ? editMission.id : (auditRef?'M-'+auditRef:'M'+String(GANTT_MISSIONS.length+1).padStart(3,'0')),
+      gmTasks=[];
+      const data = {
+        action: 'ajouter',
         ref: auditRef||undefined,
         title,
         societe:   $('#gm-soc').val(),
@@ -13283,42 +13325,115 @@ function openUnifiedModal(defaultTab, editContext){
         color:     $('#gm-color').val()||'#0070f2',
         tasks:     gmTasks,
       };
-      recalcMissionDates(nm);
-      recalcMissionEndFromTasks(nm);
-      // Marquer comme modifié manuellement pour préserver les champs lors des re-synchros
-      if(editMission) nm._manualEdit = true;
+
+      
+      var exists=false;for(var j=0;j<TAF_ITEMS.length;j++){if(TAF_ITEMS[j].id===ref){exists=true;break;}}
+      if(exists){toast('error','⚠️','La Réf '+ref+' existe déjà');return;}
+
       if(editMission){
         // Retrouver l'index par ID au moment du save (robuste aux re-synchros entre-temps)
         const liveIdx = GANTT_MISSIONS.findIndex(m=>m.id===editMission.id);
         const saveIdx = liveIdx >= 0 ? liveIdx : editMissionIdx;
-        if(saveIdx >= 0){ GANTT_MISSIONS[saveIdx]=nm; }
-        else { GANTT_MISSIONS.push(nm); } // Fallback: ajouter si introuvable
+
+        const data_modifier_mission = {
+          action: 'modifier',
+          ref: auditRef||undefined,
+          title,
+          societe:   $('#gm-soc').val(),
+          chef:      $('#gm-chef').val(),
+          assignees: Array.from(document.getElementById('gm-assignees').selectedOptions).map(o=>o.value).filter(Boolean),
+          start:     $('#gm-start').val(),
+          end:       $('#gm-end').val(),
+          progress, status,
+          color:     $('#gm-color').val()||'#0070f2',
+          tasks:     gmTasks,
+          id:GANTT_MISSIONS[saveIdx].id
+        };
+        if(saveIdx >= 0){  
+          $.ajax({
+            url: "/DAC/php/mission/actions.php",
+            type: "POST",
+            data: data_modifier_mission,
+            dataType: "json",
+
+            success: function(response){
+                recalcMissionDates(data);
+                recalcMissionEndFromTasks(data);
+                // Marquer comme modifié manuellement pour préserver les champs lors des re-synchros
+                if(editMission) data._manualEdit = true;
+                $(document).off('click.colorpick click.gmtype click.gmtask click.gmst click.gmstcancel click.gmstadd click.gmdel click.gmdelst change.gmtype click.gmedittask click.gmsavetaskedit click.gmcanceltaskedit click.gmeditst click.gmcancelstedit click.gmsavest change.gmaudit input.gmprog input.gmdates change.gmdates input.gmetedit change.gmetedit input.gmtasknj change.gmtasknj input.uniprog change.uniref');
+                $('.modal').css('width','540px');
+                
+                delete window._unifiedSaveHandler;
+                closeModal();
+                tryRender(()=>renderGantt());
+                tryRender(()=>renderWidgets());
+                toast('success','✓', `Mission "${title}" ${editMission?'mise à jour':'créée'}${auditRef?' → Audit '+auditRef+' synchronisé':''}`);
+                if(!editMission) setTimeout(()=>showView('gantt'),400);
+            },
+
+            error:function(xhr,status,error){
+
+                console.log("Status :",status);
+                console.log("Erreur :",error);
+                console.log("Réponse :",xhr.responseText);
+
+                alert("Erreur serveur : "+xhr.status);
+
+            }
+          });
+        }else{
+          
+        } // Fallback: ajouter si introuvable
+      }else { 
+        $.ajax({
+          url: "/DAC/php/mission/actions.php",
+          type: "POST",
+          data: data,
+          dataType: "json",
+
+          success: function(response){
+              recalcMissionDates(data);
+              recalcMissionEndFromTasks(data);
+              // Marquer comme modifié manuellement pour préserver les champs lors des re-synchros
+              if(editMission) data._manualEdit = true;
+              $(document).off('click.colorpick click.gmtype click.gmtask click.gmst click.gmstcancel click.gmstadd click.gmdel click.gmdelst change.gmtype click.gmedittask click.gmsavetaskedit click.gmcanceltaskedit click.gmeditst click.gmcancelstedit click.gmsavest change.gmaudit input.gmprog input.gmdates change.gmdates input.gmetedit change.gmetedit input.gmtasknj change.gmtasknj input.uniprog change.uniref');
+              $('.modal').css('width','540px');
+              
+              delete window._unifiedSaveHandler;
+              closeModal();
+              tryRender(()=>renderGantt());
+              tryRender(()=>renderWidgets());
+              toast('success','✓', `Mission "${title}" ${editMission?'mise à jour':'créée'}${auditRef?' → Audit '+auditRef+' synchronisé':''}`);
+              if(!editMission) setTimeout(()=>showView('gantt'),400);
+          },
+
+          error:function(xhr,status,error){
+
+              console.log("Status :",status);
+              console.log("Erreur :",error);
+              console.log("Réponse :",xhr.responseText);
+
+              alert("Erreur serveur : "+xhr.status);
+
+          }
+        });
       }
-      else { GANTT_MISSIONS.push(nm); }
       // Synchroniser vers l'audit lié (auditRef sélectionné OU ref existant de la mission)
       const effectiveRef = auditRef || (editMission && editMission.ref) || '';
       if(effectiveRef){
         const ai=AUDITS.findIndex(a=>a.ref===effectiveRef);
         if(ai>=0){
           // Propager les modifications Gantt → Audit
-          tryRender(()=>syncAuditsFromMission(nm));
+          tryRender(()=>syncAuditsFromMission(data));
         } else if(auditRef) {
           // Nouvel audit créé depuis une mission Gantt indépendante
-          AUDITS.push({ref:auditRef,title:nm.title,societe:nm.societe||'—',auditor:nm.chef||'',start:nm.start||'',end:nm.end||'',status:nm.status||'planned',progress:nm.progress||0,risk:'medium',type:'',objectifs:'',group:'Finance A'});
+          AUDITS.push({ref:auditRef,title:data.title,societe:data.societe||'—',auditor:data.chef||'',start:data.start||'',end:data.end||'',status:data.status||'planned',progress:data.progress||0,risk:'medium',type:'',objectifs:'',group:'Finance A'});
         }
         renderAudits(); $('#nb-audits').text(AUDITS.length);
       }
-      $(document).off('click.colorpick click.gmtype click.gmtask click.gmst click.gmstcancel click.gmstadd click.gmdel click.gmdelst change.gmtype click.gmedittask click.gmsavetaskedit click.gmcanceltaskedit click.gmeditst click.gmcancelstedit click.gmsavest change.gmaudit input.gmprog input.gmdates change.gmdates input.gmetedit change.gmetedit input.gmtasknj change.gmtasknj input.uniprog change.uniref');
-      $('.modal').css('width','540px');
-      gmTasks=[];
-      delete window._unifiedSaveHandler;
-      closeModal();
-      tryRender(()=>renderGantt());
-      tryRender(()=>renderWidgets());
-      dbSave();
-      toast('success','✓', `Mission "${title}" ${editMission?'mise à jour':'créée'}${auditRef?' → Audit '+auditRef+' synchronisé':''}`);
-      if(!editMission) setTimeout(()=>showView('gantt'),400);
 
+      
     } else {
       const titre = $('#dly-titre').val().trim();
       if(!titre){ toast('error','!','Titre requis'); return; }
@@ -13326,7 +13441,26 @@ function openUnifiedModal(defaultTab, editContext){
       const recType = document.getElementById('dly-rectype-val').value || 'dow';
       const recDow  = isPermanent&&recType==='dow' ? [...document.querySelectorAll('.dow-btn.sel')].map(b=>+b.dataset.d) : [];
       const recDom  = isPermanent&&recType==='dom' ? [...document.querySelectorAll('.dom-btn.sel')].map(b=>+b.dataset.d) : [];
-      const obj = {
+      const data = {
+        action:'ajouter',
+        titre,
+        priorite:       $('#dly-priorite').val(),
+        statut:         $('#dly-statut').val(),
+        date:           isPermanent ? '' : $('#dly-date').val(),
+        responsable:    $('#dly-resp').val(),
+        societe:        $('#dly-societe').val()||'',
+        avancement:     parseInt($('#dly-prog').val())||0,
+        duree_heures:   $('#dly-duree').val()!=='' ? parseFloat($('#dly-duree').val()) : null,
+        notes:          $('#dly-notes').val().trim(),
+        permanent:      isPermanent,
+        recurrenceType: isPermanent ? recType : '',
+        recurrenceDow:  recDow,
+        recurrenceDom:  recDom,
+        fiches_completion: DLY_FICHES_TEMP.slice(),
+      };
+
+      const data_edit = {
+        action:'modifier',
         id:             editDaily ? ed.id : ('DT-'+(Date.now()%100000)),
         titre,
         priorite:       $('#dly-priorite').val(),
@@ -13346,18 +13480,58 @@ function openUnifiedModal(defaultTab, editContext){
       $(document).off('input.uniprog change.uniref');
       delete window._unifiedSaveHandler;
       if(editDaily){
-        Object.assign(DAILY_TASKS[editDailyIdx], obj);
-        if(prevGanttRef){
-          const newProg=obj.avancement||0;
-          GANTT_MISSIONS.forEach(m=>{ m.tasks.forEach(task=>{ if(task.id===prevGanttTaskId)task.progress=newProg; (task.subtasks||[]).forEach(st=>{if(st.id===prevGanttTaskId)st.progress=newProg;}); }); });
-          if(isViewVisible('view-gantt')) tryRender(()=>renderGantt());
+        $.ajax({
+          url: "/DAC/php/tache_quotidienne/actions.php",
+          type: "POST",
+          data: data_edit,
+          dataType: "json",
+
+          success: function(response){
+            toast('success','✓', (editDaily?'Tâche mise à jour':'Tâche créée'));
+            $('.modal').css('width','540px');
+            closeModal();
+            tryRender(()=>renderDailyTasks());
+
+            Object.assign(DAILY_TASKS[editDailyIdx], data_edit);
+            if(prevGanttRef){
+              const newProg=data.avancement||0;
+              GANTT_MISSIONS.forEach(m=>{ m.tasks.forEach(task=>{ if(task.id===prevGanttTaskId)task.progress=newProg; (task.subtasks||[]).forEach(st=>{if(st.id===prevGanttTaskId)st.progress=newProg;}); }); });
+              if(isViewVisible('view-gantt')) tryRender(()=>renderGantt());
+            }
+          },
+
+          error:function(xhr,status,error){
+              console.log("Status :",status);
+              console.log("Erreur :",error);
+              console.log("Réponse :",xhr.responseText);
+
+              alert("Erreur serveur : "+xhr.status);
+          }
+        }); 
+        
+      } else { DAILY_TASKS.push(data); }
+      
+      $.ajax({
+        url: "/DAC/php/tache_quotidienne/actions.php",
+        type: "POST",
+        data: data,
+        dataType: "json",
+
+        success: function(response){
+          toast('success','✓', (editDaily?'Tâche mise à jour':'Tâche créée'));
+          $('.modal').css('width','540px');
+          closeModal();
+          tryRender(()=>renderDailyTasks());
+        },
+
+        error:function(xhr,status,error){
+            console.log("Status :",status);
+            console.log("Erreur :",error);
+            console.log("Réponse :",xhr.responseText);
+
+            alert("Erreur serveur : "+xhr.status);
         }
-      } else { DAILY_TASKS.push(obj); }
-      $('.modal').css('width','540px');
-      closeModal();
-      tryRender(()=>renderDailyTasks());
-      dbSave();
-      toast('success','✓', (editDaily?'Tâche mise à jour':'Tâche créée'));
+      }); 
     }
   };
 
@@ -13394,10 +13568,34 @@ $(document).on('click','.daily-edit-btn', function(){
 $(document).on('click','.daily-del-btn', function(){
   const idx = parseInt($(this).data('idx'));
   const t = DAILY_TASKS[idx]; if(!t) return;
+
   if(!confirm(`Supprimer "${t.titre}" ?`)) return;
-  DAILY_TASKS.splice(idx,1);
-  renderDailyTasks(); dbSave();
-  toast('success','🗑','Tâche supprimée');
+    const dataDelete = {
+        action: 'supprimer',
+        id: t.id
+    };
+  
+    $.ajax({
+      url: "/DAC/php/tache_quotidienne/actions.php",
+      type: "POST",
+      data: dataDelete,
+      dataType: "json",
+
+      success: function(response){
+          DAILY_TASKS.splice(idx,1);
+          renderDailyTasks(); dbSave();
+          toast('success','🗑','Tâche supprimée');
+      },
+
+      error:function(xhr,status,error){
+
+          console.log("Status :",status);
+          console.log("Erreur :",error);
+          console.log("Réponse :",xhr.responseText);
+
+          alert("Erreur serveur : "+xhr.status);
+      }
+  });
 });
 
 $(document).on('click','.daily-toggle-done', function(){
@@ -13427,13 +13625,33 @@ $(document).on('click','.daily-prog-btn', function(){
   });
   $('#msave').text('Mettre à jour').data('mode','daily-prog-save');
   window._dqpSave = function(){
-    t.avancement = parseInt($('#dqp-range').val())||0;
-    if(t.avancement>=100) t.statut='done'; else if(t.avancement>0) t.statut='inprogress';
+    const data_modifier_rapide = {
+      action:'modifier_rapide',
+      id:t.id,
+      avancement: parseInt($('#dqp-range').val())||0
+    };
+    
+    $.ajax({
+        url: "/DAC/php/tache_quotidienne/actions.php",
+        type: "POST",
+        data: data_modifier_rapide,
+        dataType: "json",
 
-    $(document).off('input.dqprange click.dqppreset');
-    delete window._dqpSave;
-    closeModal(); renderDailyTasks(); dbSave();
-    toast('success','✓',`Avancement : ${t.avancement}%`);
+        success: function(response){
+            $(document).off('input.dqprange click.dqppreset');
+            delete window._dqpSave;
+            closeModal(); renderDailyTasks(); dbSave();
+            toast('success','✓',`Avancement : ${t.avancement}%`);
+        },
+
+        error:function(xhr,status,error){
+            console.log("Status :",status);
+            console.log("Erreur :",error);
+            console.log("Réponse :",xhr.responseText);
+
+            alert("Erreur serveur : "+xhr.status);
+        }
+    }); 
   };
 });
 
@@ -15099,69 +15317,86 @@ function dbLoadOM(){
 }
 
 function renderOM(){
-  const q = ($('#om-search').val()||'').toLowerCase();
-  const fs = $('#om-filter-soc').val()||'';
+  $.ajax({
+    url: "/DAC/php/mission/actions.php",
+      type: "POST",
+      dataType: "json",
+      data: {
+          action: "lister"
+      },
 
-  // Peupler filtre société
-  const $fs=$('#om-filter-soc');
-  if($fs.find('option').length<=1){
-    [...new Set(ORDRES_MISSION.map(o=>o.societe).filter(Boolean))].sort()
-      .forEach(s=>$fs.append(`<option value="${s}">${s}</option>`));
-  }
+      success: function(response) {
+        ORDRES_MISSION=response.data;
 
-  const filtered = ORDRES_MISSION.filter(o=>{
-    if(fs && o.societe!==fs) return false;
-    const txt=`${o.ref} ${o.societe} ${o.objet} ${o.chefMission}`.toLowerCase();
-    if(q && !txt.includes(q)) return false;
-    return true;
-  });
+        const q = ($('#om-search').val()||'').toLowerCase();
+        const fs = $('#om-filter-soc').val()||'';
 
-  const $grid=$('#om-cards-grid').empty();
-  $('#om-count').text(filtered.length+' ordre'+(filtered.length>1?'s':''));
+        // Peupler filtre société
+        const $fs=$('#om-filter-soc');
+        if($fs.find('option').length<=1){
+          [...new Set(ORDRES_MISSION.map(o=>o.societe).filter(Boolean))].sort()
+            .forEach(s=>$fs.append(`<option value="${s}">${s}</option>`));
+        }
 
-  if(!filtered.length){ $('#om-empty').show(); return; }
-  $('#om-empty').hide();
+        const filtered = ORDRES_MISSION.filter(o=>{
+          if(fs && o.societe!==fs) return false;
+          const txt=`${o.ref} ${o.societe} ${o.objet} ${o.chefMission}`.toLowerCase();
+          if(q && !txt.includes(q)) return false;
+          return true;
+        });
 
-  const stCfg={
-    planned:{label:'Planifié',cls:'om-badge-planned'},
-    inprogress:{label:'En cours',cls:'om-badge-inprogress'},
-    done:{label:'Terminé',cls:'om-badge-done'}
-  };
-  const stIco={planned:'📋',inprogress:'🔄',done:'✅'};
+        const $grid=$('#om-cards-grid').empty();
+        $('#om-count').text(filtered.length+' ordre'+(filtered.length>1?'s':''));
 
-  filtered.forEach((o,i)=>{
-    const idx=ORDRES_MISSION.indexOf(o);
-    const sc=stCfg[o.statut]||stCfg.planned;
-    const team=(o.equipe||[]).map(m=>`<span style="font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:8px;margin:1px;">${m.nom}</span>`).join('');
-    $grid.append(`
-    <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.06);transition:box-shadow .15s;"
-         onmouseover="this.style.boxShadow=\'0 4px 14px rgba(0,0,0,.12)\'"
-         onmouseout="this.style.boxShadow=\'0 1px 4px rgba(0,0,0,.06)\'">
-      <div style="background:linear-gradient(135deg,#0070f2,#1a4fa0);padding:10px 14px;display:flex;justify-content:space-between;align-items:flex-start;">
-        <div>
-          <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.75);margin-bottom:2px;">${o.ref||'—'}</div>
-          <div style="font-size:12px;font-weight:700;color:#fff;line-height:1.3;">${o.objet||'Mission d\'audit'}</div>
-        </div>
-        <span style="font-size:8px;" class="om-badge ${sc.cls}">${stIco[o.statut]||'📋'} ${sc.label}</span>
-      </div>
-      <div style="padding:10px 14px;font-size:11px;">
-        <div style="display:flex;gap:14px;margin-bottom:7px;flex-wrap:wrap;">
-          <span style="color:var(--text-muted);">🏢 <strong>${o.societe||'—'}</strong></span>
-          <span style="color:var(--text-muted);">👤 ${o.chefMission||'—'}</span>
-        </div>
-        <div style="display:flex;gap:12px;margin-bottom:8px;font-size:10px;color:var(--text-muted);">
-          <span>📅 Du <strong>${o.dateDebut||'—'}</strong> au <strong>${o.dateFin||'—'}</strong></span>
-          <span style="margin-left:auto;">🗓️ Émis le ${o.dateEmission||'—'}</span>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">${team||'<span style="font-size:10px;color:var(--text-dim);">Aucun membre</span>'}</div>
-        <div style="display:flex;gap:6px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:8px;margin-top:2px;">
-          <button class="btn om-view-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;">👁 Aperçu</button>
-          <button class="btn om-edit-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;">✏️ Modifier</button>
-          <button class="btn om-print-one-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;background:var(--accent);color:#fff;border-color:var(--accent);">🖨️ Imprimer</button>
-          <button class="btn om-del-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;color:var(--red);border-color:var(--red-bg);">✕</button>
-        </div>
-      </div>
-    </div>`);
+        if(!filtered.length){ $('#om-empty').show(); return; }
+        $('#om-empty').hide();
+
+        const stCfg={
+          planned:{label:'Planifié',cls:'om-badge-planned'},
+          inprogress:{label:'En cours',cls:'om-badge-inprogress'},
+          done:{label:'Terminé',cls:'om-badge-done'}
+        };
+        const stIco={planned:'📋',inprogress:'🔄',done:'✅'};
+
+        filtered.forEach((o,i)=>{
+          const idx=ORDRES_MISSION.indexOf(o);
+          const sc=stCfg[o.statut]||stCfg.planned;
+          const team=(o.equipe||[]).map(m=>`<span style="font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:8px;margin:1px;">${m.nom}</span>`).join('');
+          $grid.append(`
+          <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.06);transition:box-shadow .15s;"
+              onmouseover="this.style.boxShadow=\'0 4px 14px rgba(0,0,0,.12)\'"
+              onmouseout="this.style.boxShadow=\'0 1px 4px rgba(0,0,0,.06)\'">
+            <div style="background:linear-gradient(135deg,#0070f2,#1a4fa0);padding:10px 14px;display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.75);margin-bottom:2px;">${o.ref||'—'}</div>
+                <div style="font-size:12px;font-weight:700;color:#fff;line-height:1.3;">${o.objet||'Mission d\'audit'}</div>
+              </div>
+              <span style="font-size:8px;" class="om-badge ${sc.cls}">${stIco[o.statut]||'📋'} ${sc.label}</span>
+            </div>
+            <div style="padding:10px 14px;font-size:11px;">
+              <div style="display:flex;gap:14px;margin-bottom:7px;flex-wrap:wrap;">
+                <span style="color:var(--text-muted);">🏢 <strong>${o.societe||'—'}</strong></span>
+                <span style="color:var(--text-muted);">👤 ${o.chefMission||'—'}</span>
+              </div>
+              <div style="display:flex;gap:12px;margin-bottom:8px;font-size:10px;color:var(--text-muted);">
+                <span>📅 Du <strong>${o.dateDebut||'—'}</strong> au <strong>${o.dateFin||'—'}</strong></span>
+                <span style="margin-left:auto;">🗓️ Émis le ${o.dateEmission||'—'}</span>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">${team||'<span style="font-size:10px;color:var(--text-dim);">Aucun membre</span>'}</div>
+              <div style="display:flex;gap:6px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:8px;margin-top:2px;">
+                <button class="btn om-view-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;">👁 Aperçu</button>
+                <button class="btn om-edit-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;">✏️ Modifier</button>
+                <button class="btn om-print-one-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;background:var(--accent);color:#fff;border-color:var(--accent);">🖨️ Imprimer</button>
+                <button class="btn om-del-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;color:var(--red);border-color:var(--red-bg);">✕</button>
+              </div>
+            </div>
+          </div>`);
+        });
+      },
+
+      error: function(xhr) {
+          console.log("Erreur AJAX :", xhr.responseText);
+      }
   });
 }
 
@@ -15706,6 +15941,7 @@ function readCustomFields(){
 }
 
 function saveOM(idx){
+  tody
   const ref=$('#om-ref').val().trim();
   const societe=$('#om-societe').val();
   const objet=$('#om-objet').val().trim();
@@ -17305,35 +17541,55 @@ $('#eis-quadrant').on('change',function(){
 
 /* ── Points Forts ── */
 function renderPointsForts(){
+  $.ajax({
+    url: "/DAC/php/point_fort/actions.php",
+    type: "POST",
+    dataType: "json",
+    data: {
+        action: "lister"
+    },
+
+    success: function(response) {
+        if (response.success) {
+          POINTS_FORTS=response.data;
+          var $f=$('#pf-filter-audit');
+          var curF=$f.val();
+          $f.find('option:not(:first-child)').remove();
+          (AUDITS||[]).forEach(function(a){ $f.append('<option value="'+a.ref+'">'+a.ref+' — '+a.title+'</option>'); });
+          if(curF) $f.val(curF);
+
+          var filter=$f.val()||'';
+          var rows = POINTS_FORTS.filter(function(p){ return !filter||p.auditRef===filter; });
+
+          $('#pf-empty').toggle(!rows.length);
+          $('#pf-table').toggle(!!rows.length);
+
+          var html='';
+          rows.forEach(function(p,i){
+            var realIdx = POINTS_FORTS.indexOf(p);
+            var audit = (AUDITS||[]).find(function(a){ return a.ref===p.auditRef; });
+            html += '<tr data-idx="'+realIdx+'">' +
+              '<td><span style="font-family:var(--mono);font-size:10.5px;color:var(--accent);">'+p.auditRef+'</span>'+(audit?'<div style="font-size:10px;color:var(--text-muted);margin-top:1px;">'+audit.title+'</div>':'')+'</td>' +
+              '<td style="font-weight:600;font-size:11.5px;">'+p.processus+'</td>' +
+              '<td style="max-width:260px;font-size:11.5px;line-height:1.5;">'+p.pointFort+'</td>' +
+              '<td style="max-width:220px;font-size:11.5px;color:var(--text-muted);line-height:1.5;">'+( p.impact||'—')+'</td>' +
+              '<td><div style="display:flex;gap:4px;">' +
+                '<button class="tbtn pf-edit-btn" data-idx="'+realIdx+'" style="font-size:10px;padding:2px 7px;">✏️</button>' +
+                '<button class="tbtn pf-del-btn" data-idx="'+realIdx+'" style="font-size:10px;padding:2px 7px;color:var(--red);">🗑</button>' +
+              '</div></td>' +
+            '</tr>';
+          });
+          $('#pf-tbody').html(html);
+        } else {
+            console.log(response.message);
+        }
+    },
+
+    error: function(xhr) {
+        console.log("Erreur AJAX :", xhr.responseText);
+    }
+});
   /* populate audit filter */
-  var $f=$('#pf-filter-audit');
-  var curF=$f.val();
-  $f.find('option:not(:first-child)').remove();
-  (AUDITS||[]).forEach(function(a){ $f.append('<option value="'+a.ref+'">'+a.ref+' — '+a.title+'</option>'); });
-  if(curF) $f.val(curF);
-
-  var filter=$f.val()||'';
-  var rows = POINTS_FORTS.filter(function(p){ return !filter||p.auditRef===filter; });
-
-  $('#pf-empty').toggle(!rows.length);
-  $('#pf-table').toggle(!!rows.length);
-
-  var html='';
-  rows.forEach(function(p,i){
-    var realIdx = POINTS_FORTS.indexOf(p);
-    var audit = (AUDITS||[]).find(function(a){ return a.ref===p.auditRef; });
-    html += '<tr data-idx="'+realIdx+'">' +
-      '<td><span style="font-family:var(--mono);font-size:10.5px;color:var(--accent);">'+p.auditRef+'</span>'+(audit?'<div style="font-size:10px;color:var(--text-muted);margin-top:1px;">'+audit.title+'</div>':'')+'</td>' +
-      '<td style="font-weight:600;font-size:11.5px;">'+p.processus+'</td>' +
-      '<td style="max-width:260px;font-size:11.5px;line-height:1.5;">'+p.pointFort+'</td>' +
-      '<td style="max-width:220px;font-size:11.5px;color:var(--text-muted);line-height:1.5;">'+( p.impact||'—')+'</td>' +
-      '<td><div style="display:flex;gap:4px;">' +
-        '<button class="tbtn pf-edit-btn" data-idx="'+realIdx+'" style="font-size:10px;padding:2px 7px;">✏️</button>' +
-        '<button class="tbtn pf-del-btn" data-idx="'+realIdx+'" style="font-size:10px;padding:2px 7px;color:var(--red);">🗑</button>' +
-      '</div></td>' +
-    '</tr>';
-  });
-  $('#pf-tbody').html(html);
 }
 
 /* populate audit select in modal */
@@ -17368,18 +17624,93 @@ $('#pf-modal-save').on('click', function(){
   var impact    = $('#pf-impact').val().trim();
   if(!auditRef||!processus||!pointFort){ toast('error','⚠️','Audit, Processus et Point Fort sont obligatoires.'); return; }
   var idx = parseInt($('#pf-edit-idx').val());
-  var obj = { auditRef, processus, pointFort, impact };
-  if(!isNaN(idx) && idx >= 0) POINTS_FORTS[idx] = obj;
-  else POINTS_FORTS.push(obj);
-  pfSave(); pfCloseModal(); renderPointsForts();
-  toast('success','✅', (isNaN(idx)||idx<0)?'Point fort ajouté.':'Point fort mis à jour.');
+  var data = { action:'ajouter',auditRef, processus, pointFort, impact };
+  
+  if(!isNaN(idx) && idx >= 0){
+    var data_modifier = { action:'modifier',auditRef, processus, pointFort, impact , id:POINTS_FORTS[idx].id};
+
+    POINTS_FORTS[idx] = data_modifier;
+    $.ajax({
+      url: "/DAC/php/point_fort/actions.php",
+      type: "POST",
+      data: data_modifier,
+      dataType: "json",
+
+      success: function(response){
+        pfCloseModal(); renderPointsForts();
+        toast('success','✅', (isNaN(idx)||idx<0)?'Point fort ajouté.':'Point fort mis à jour.');
+      },
+
+      error:function(xhr,status,error){
+          console.log("Status :",status);
+          console.log("Erreur :",error);
+          console.log("Réponse :",xhr.responseText);
+
+          alert("Erreur serveur : "+xhr.status);
+      }
+    });
+
+  }else{
+    POINTS_FORTS.push(data);
+
+    $.ajax({
+      url: "/DAC/php/point_fort/actions.php",
+      type: "POST",
+      data: data,
+      dataType: "json",
+
+      success: function(response){
+        pfCloseModal(); renderPointsForts();
+        toast('success','✅', (isNaN(idx)||idx<0)?'Point fort ajouté.':'Point fort mis à jour.');
+      },
+
+      error:function(xhr,status,error){
+          console.log("Status :",status);
+          console.log("Erreur :",error);
+          console.log("Réponse :",xhr.responseText);
+
+          alert("Erreur serveur : "+xhr.status);
+      }
+    });
+  }
 });
 
 $(document).on('click','.pf-edit-btn',function(){ pfOpenModal(parseInt($(this).data('idx'))); });
 $(document).on('click','.pf-del-btn',function(){
-  var idx=parseInt($(this).data('idx'));
-  POINTS_FORTS.splice(idx,1); pfSave(); renderPointsForts();
-  toast('success','🗑️','Point fort supprimé.');
+  if(!confirm('Supprimer le Point fort ?'))return;
+    var idx=parseInt($(this).data('idx'));
+
+    const dataDelete = {
+        action: 'supprimer',
+        id: POINTS_FORTS[idx].id
+    };
+  
+    $.ajax({
+      url: "/DAC/php/point_fort/actions.php",
+      type: "POST",
+      data: dataDelete,
+      dataType: "json",
+
+      success: function(response){
+          console.log(response);
+          if(response.success){  
+            toast('success','🗑️','Point fort supprimé.');
+            renderPointsForts();
+          }else{
+
+              toast('error','Erreur',response.message);
+          }
+      },
+
+      error:function(xhr,status,error){
+
+          console.log("Status :",status);
+          console.log("Erreur :",error);
+          console.log("Réponse :",xhr.responseText);
+
+          alert("Erreur serveur : "+xhr.status);
+      }
+  });
 });
 $(document).on('change','#pf-filter-audit',function(){ renderPointsForts(); });
 
@@ -19289,6 +19620,7 @@ function renderTAF(){
           }).join('');
           $('#taf-tbody').html(html);
           updateTAFBadge();
+          
         } else {
             console.log(response.message);
         }
@@ -19298,6 +19630,8 @@ function renderTAF(){
         console.log("Erreur AJAX :", xhr.responseText);
     }
 });
+
+$('#nb-taf').text(TAF_ITEMS.length);
 
 }
 
@@ -19348,50 +19682,27 @@ function tafRenderFichesList(){
 
 
 function tafRemoveFiche(id){
-  $.ajax({
-    url: "/DAC/php/taf/actions.php",
-    type: "POST",
-    dataType: "json",
-    data: {
-        action: "lister"
-    },
+  const fichier = TAF_FICHES_TEMP.find(p => String(p.id) === String(id));
 
-    success: function(response) {
-      if (response.success) {
-        console.log(response.data);
-        TAF_FICHES_TEMP = response.data;
-        //TAF_FICHES_TEMP = TAF_FICHES_TEMP.find(function(p){ return String(p.id) === String(id); });
-
-        // Sécurité : vérifier que le taf existe et a des fiches_test
-        /*if (!TAF_FICHES_TEMP || !Array.isArray(TAF_FICHES_TEMP.fiches_test) || TAF_FICHES_TEMP.fiches_test.length === 0) {
-          console.warn('Aucune fiche de test trouvée pour cet id:', id);
-          return;
-        }*/
-
+    if (fichier) {
         $.ajax({
-          url: '/DAC/php/taf/delete_fichier.php',
-          type: 'POST',
-          data: { name: TAF_FICHES_TEMP[0].fiches_test[0].name }, // <-- pas de [0] sur TAF_FICHES_TEMP
-          success: function(response) {
-            console.log('Fichier supprimé du serveur', response);
-          },
-          error: function(xhr) {
-            console.error('Erreur suppression fichier', xhr.responseText);
-          }
+            url: '/DAC/php/taf/delete_fichier.php',
+            type: 'POST',
+            data: {
+                name: fichier.name
+            },
+            success: function(res) {
+                console.log('Fichier supprimé :', fichier.name, res);
+            },
+            error: function(xhr) {
+                console.error('Erreur suppression :', fichier.name, xhr.responseText);
+            }
         });
-
-          // Retrait immédiat de l'affichage (sans attendre la réponse serveur)
-          TAF_FICHES_TEMP = TAF_FICHES_TEMP.filter(function(p){ return p.id !== id; });
-          tafRenderFichesList();
-        } else {
-            console.log(response.message);
-        }
-    },
-
-    error: function(xhr) {
-        console.log("Erreur AJAX :", xhr.responseText);
     }
-});
+
+    // Ensuite seulement supprimer la tâche du tableau
+    TAF_FICHES_TEMP = TAF_FICHES_TEMP.filter(p => p.id !== id);
+    tafRenderFichesList();
 }
 
 // ── 📎 Tâches Quotidiennes — Preuve d'achèvement (mêmes principes que la Zone Upload TAF) ──
@@ -19421,6 +19732,27 @@ function dlyRenderFichesList(){
 window.dlyRenderFichesList = dlyRenderFichesList;
 
 function dlyHandleFiles(fileList){
+  var formData = new FormData();
+  
+  for (var i = 0; i < fileList.length; i++) {
+    formData.append('fichiers[]', fileList[i]);
+    dlyRenderFichesList();
+  }
+
+  $.ajax({
+    url: '/DAC/php/tache_quotidienne/upload.php',
+    type: 'POST',
+    data: formData,
+    processData: false,
+    contentType: false,
+    success: function(response) {
+      console.log('Upload réussi', response);
+    },
+    error: function(xhr) {
+      console.error('Erreur upload', xhr.responseText);
+    }
+  });
+        
   var files = Array.prototype.slice.call(fileList || []);
   if(!files.length) return;
   files.forEach(function(file){
@@ -19431,11 +19763,11 @@ function dlyHandleFiles(fileList){
     var reader = new FileReader();
     reader.onload = function(ev){
       DLY_FICHES_TEMP.push({
-        id:      'dt_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
+        id:      'ft_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
         name:    file.name,
         type:    file.type || '',
         size:    file.size,
-        dataUrl: ev.target.result,
+        dataUrl: '/DAC/php/tache_quotidienne/fichiers/' + file.name,
         addedAt: new Date().toISOString().slice(0,10)
       });
       dlyRenderFichesList();
@@ -19449,8 +19781,28 @@ function dlyHandleFiles(fileList){
 window.dlyHandleFiles = dlyHandleFiles;
 
 function dlyRemoveFiche(id){
-  DLY_FICHES_TEMP = DLY_FICHES_TEMP.filter(function(p){ return p.id !== id; });
-  dlyRenderFichesList();
+  // Récupérer la tâche à supprimer
+  const fichier = DLY_FICHES_TEMP.find(p => String(p.id) === String(id));
+
+    if (fichier) {
+        $.ajax({
+            url: '/DAC/php/tache_quotidienne/delete_fichier.php',
+            type: 'POST',
+            data: {
+                name: fichier.name
+            },
+            success: function(res) {
+                console.log('Fichier supprimé :', fichier.name, res);
+            },
+            error: function(xhr) {
+                console.error('Erreur suppression :', fichier.name, xhr.responseText);
+            }
+        });
+    }
+
+    // Ensuite seulement supprimer la tâche du tableau
+    DLY_FICHES_TEMP = DLY_FICHES_TEMP.filter(p => p.id !== id);
+    dlyRenderFichesList();
 }
 window.dlyRemoveFiche = dlyRemoveFiche;
 
@@ -20189,44 +20541,27 @@ function frapHandleFiles(fileList){
 }
 
 function frapRemovePreuve(id){
-  $.ajax({
-    url: "/DAC/php/frap/actions.php",
-    type: "POST",
-    dataType: "json",
-    data: {
-        action: "lister"
-    },
+   const fichier = FRAP_PREUVES_TEMP.find(p => String(p.id) === String(id));
 
-    success: function(response) {
-      if (response.success) {
-        console.log(response.data);
-        FRAP_PREUVES_TEMP = response.data;
-        
+    if (fichier) {
         $.ajax({
-          url: '/DAC/php/frap/delete_fichier.php',
-          type: 'POST',
-          data: { name: FRAP_PREUVES_TEMP[0].preuves[0].name }, // <-- pas de [0] sur TAF_FICHES_TEMP
-          success: function(response) {
-            console.log('Fichier supprimé du serveur', response);
-          },
-          error: function(xhr) {
-            console.error('Erreur suppression fichier', xhr.responseText);
-          }
+            url: '/DAC/php/frap/delete_fichier.php',
+            type: 'POST',
+            data: {
+                name: fichier.name
+            },
+            success: function(res) {
+                console.log('Fichier supprimé :', fichier.name, res);
+            },
+            error: function(xhr) {
+                console.error('Erreur suppression :', fichier.name, xhr.responseText);
+            }
         });
-
-          // Retrait immédiat de l'affichage (sans attendre la réponse serveur)
-          FRAP_PREUVES_TEMP = FRAP_PREUVES_TEMP.filter(function(p){ return String(p.id) !== String(id); });
-          frapRenderPreuvesList();
-        } else {
-            console.log(response.message);
-        }
-    },
-
-    error: function(xhr) {
-        console.log("Erreur AJAX :", xhr.responseText);
     }
-  });
 
+    // Ensuite seulement supprimer la tâche du tableau
+    FRAP_PREUVES_TEMP = FRAP_PREUVES_TEMP.filter(p => p.id !== id);
+    frapRenderPreuvesList();
 }
 
 // Convertit un data URL (base64) en Blob pour ouverture/téléchargement

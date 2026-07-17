@@ -1,63 +1,54 @@
 <?php
 
-class Tache_quotidienne
+class TacheQuotidienne
 {
     public ?int $id;
-    public string $numero;
-    public string $ref;
-    public array $audit_refs;
-    public array $taf_ref;
     public string $titre;
-    public string $criticite;
+    public string $priorite;
+    public string $statut;
+    public string $date;
+    public string $responsable;
     public string $societe;
-    public string $cycle;
-    public string $auditeur;
-    public string $description;
-    public string $causes;
-    public string $consequences;
-    public array $recommandations;
-    public array $actions;
-    public array $preuves;
-    public string $updated_at;
-    public string $created_at;
+    public int $avancement;
+    public ?float $duree_heures;
+    public string $notes;
+    public bool $permanent;
+    public string $recurrenceType;
+    public array $recurrenceDow;
+    public array $recurrenceDom;
+    public array $fiches_completion;
 
     public function __construct(
-        $numero,
-        $ref,
-        $audit_refs,
-        $taf_ref,
         $titre,
-        $criticite,
+        $priorite,
+        $statut,
+        $date,
+        $responsable,
         $societe,
-        $cycle,
-        $auditeur,
-        $description,
-        $causes,
-        $consequences,
-        ?array $recommandations,
-        ?array $actions,
-        $preuves,
-        $created_at,
-        $updated_at,
+        $avancement,
+        $duree_heures,
+        $notes,
+        $permanent,
+        $recurrenceType,
+        $recurrenceDow,
+        $recurrenceDom,
+        $fiches_completion,
         ?int $id = null
     ) {
         $this->id = $id;
-        $this->numero = $numero;
-        $this->ref = $ref;
-        $this->audit_refs = is_array($audit_refs) ? $audit_refs : [];
-        $this->taf_ref = is_array($taf_ref) ? $taf_ref : [];
         $this->titre = $titre;
-        $this->criticite = $criticite;
+        $this->priorite = $priorite;
+        $this->statut = $statut;
+        $this->date = $date;
+        $this->responsable = $responsable;
         $this->societe = $societe;
-        $this->cycle = $cycle;
-        $this->auditeur = $auditeur;
-        $this->description = $description;
-        $this->causes = $causes;
-        $this->consequences = $consequences;
-        $this->recommandations = is_array($recommandations) ? $recommandations : [];
-        $this->actions =is_array($actions) ? $actions : [];
-        $this->preuves = is_array($preuves) ? $preuves : [];
-        $this->created_at = $created_at;
-        $this->updated_at = $updated_at;
+        $this->avancement = (int) $avancement;
+        $this->duree_heures = ($duree_heures === null || $duree_heures === '') ? null : (float) $duree_heures;
+        $this->notes = $notes;
+        $this->permanent = (bool) $permanent;
+        $this->recurrenceType = $recurrenceType;
+        $this->recurrenceDow = is_array($recurrenceDow) ? $recurrenceDow : [];
+        $this->recurrenceDom = is_array($recurrenceDom) ? $recurrenceDom : [];
+        $this->fiches_completion = is_array($fiches_completion) ? $fiches_completion : [];
     }
 }

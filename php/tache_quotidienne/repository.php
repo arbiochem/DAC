@@ -1,7 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../Database.php';
-require_once __DIR__ . '/frap.php';
+require_once __DIR__ . '/tache_quotidienne.php';
+require_once __DIR__ . '/tache_rapide.php';
 
 class Repository {
     private PDO $db;
@@ -10,43 +11,43 @@ class Repository {
         $this->db = Database::getInstance()->getConnexion();
     }
 
-    // CREATE : ajouter une ligne FRAP
-    public function ajouter(Frap $frap): bool {
-        $sql = "INSERT INTO frap (
-                    numero, ref, audit_refs, taf_ref, titre, criticite, societe, cycle,
-                    auditeur, description, causes, consequences, recommandations, actions,
-                    preuves, created_at, updated_at
+    // CREATE : ajouter une tâche
+    public function ajouter(TacheQuotidienne $tache_quotidienne): bool {
+        $sql = "INSERT INTO tache_quotidiennes (
+                    titre, priorite, statut, date, responsable, societe,
+                    avancement, duree_heures, notes, permanent,
+                    recurrenceType, recurrenceDow, recurrenceDom, fiches_completion
                 ) VALUES (
-                    :numero, :ref, :audit_refs, :taf_ref, :titre, :criticite, :societe, :cycle,
-                    :auditeur, :description, :causes, :consequences, :recommandations, :actions,
-                    :preuves, :created_at, :updated_at
+                    :titre, :priorite, :statut, :date, :responsable, :societe,
+                    :avancement, :duree_heures, :notes, :permanent,
+                    :recurrenceType, :recurrenceDow, :recurrenceDom, :fiches_completion
                 )";
 
         $stmt = $this->db->prepare($sql);
-        $success = $stmt->execute($this->toParams($frap));
+        $success = $stmt->execute($this->toParams($tache_quotidienne));
 
         if ($success) {
-            $frap->id = (int) $this->db->lastInsertId();
+            $tache_quotidienne->id = (int) $this->db->lastInsertId();
         }
 
         return $success;
     }
 
-    // READ : récupérer toutes les lignes FRAP
+    // READ : récupérer toutes les tâches
     public function getAll(): array {
-        $stmt = $this->db->query("SELECT * FROM frap");
+        $stmt = $this->db->query("SELECT * FROM tache_quotidiennes");
         $resultats = $stmt->fetchAll();
 
-        $fraps = [];
+        $tache_quotidiennes = [];
         foreach ($resultats as $ligne) {
-            $fraps[] = $this->hydrate($ligne);
+            $tache_quotidiennes[] = $this->hydrate($ligne);
         }
-        return $fraps;
+        return $tache_quotidiennes;
     }
 
-    // READ : récupérer une ligne FRAP par son id
-    public function getById(int $id): ?Frap {
-        $sql = "SELECT * FROM frap WHERE id = :id";
+    // READ : récupérer une tâche par son id
+    public function getById(int $id): ?TacheQuotidienne {
+        $sql = "SELECT * FROM tache_quotidiennes WHERE id = :id";
         $stmt = $this->db->prepare($sql);
         $stmt->execute(['id' => $id]);
         $ligne = $stmt->fetch();
@@ -58,39 +59,48 @@ class Repository {
         return $this->hydrate($ligne);
     }
 
-    // UPDATE : mettre à jour une ligne FRAP
-    public function modifier(Frap $frap): bool {
-        $sql = "UPDATE frap SET
-            numero=:numero,
-            ref=:ref,
-            audit_refs=:audit_refs,
-            taf_ref=:taf_ref,
+    // UPDATE : mettre à jour une tâche
+    public function modifier(TacheQuotidienne $tache_quotidienne): bool {
+        $sql = "UPDATE tache_quotidiennes SET
             titre=:titre,
-            criticite=:criticite,
+            priorite=:priorite,
+            statut=:statut,
+            date=:date,
+            responsable=:responsable,
             societe=:societe,
-            cycle=:cycle,
-            auditeur=:auditeur,
-            description=:description,
-            causes=:causes,
-            consequences=:consequences,
-            recommandations=:recommandations,
-            actions=:actions,
-            preuves=:preuves,
-            created_at=:created_at,
-            updated_at=:updated_at
+            avancement=:avancement,
+            duree_heures=:duree_heures,
+            notes=:notes,
+            permanent=:permanent,
+            recurrenceType=:recurrenceType,
+            recurrenceDow=:recurrenceDow,
+            recurrenceDom=:recurrenceDom,
+            fiches_completion=:fiches_completion
         WHERE id = :id";
 
         $stmt = $this->db->prepare($sql);
 
-        $params = $this->toParams($frap);
-        $params['id'] = $frap->id;
+        $params = $this->toParams($tache_quotidienne);
+        $params['id'] = $tache_quotidienne->id;
 
         return $stmt->execute($params);
     }
 
-    // DELETE : supprimer une ligne FRAP
+    public function modifier_rapide(Tache_rapide $tache): bool {
+        $sql = "UPDATE tache_quotidiennes SET
+            avancement=:avancement
+        WHERE id = :id";
+
+        $stmt = $this->db->prepare($sql);
+
+        $params = $this->toParams1($tache);
+
+        return $stmt->execute($params);
+    }
+
+    // DELETE : supprimer une tâche
     public function supprimer(int $id): bool {
-        $sql = "DELETE FROM frap WHERE id = :id";
+        $sql = "DELETE FROM tache_quotidiennes WHERE id = :id";
         $stmt = $this->db->prepare($sql);
         return $stmt->execute(['id' => $id]);
     }
@@ -101,50 +111,51 @@ class Repository {
         return is_array($decoded) ? $decoded : [];
     }
 
-    // Construit un objet Frap à partir d'une ligne de résultat SQL
-    private function hydrate(array $ligne): Frap {
-        return new Frap(
-            $ligne['numero'],
-            $ligne['ref'],
-            $this->decodeArrayField($ligne['audit_refs']) ?? [],
-            $this->decodeArrayField($ligne['taf_ref']) ?? [],
+    // Construit un objet TacheQuotidienne à partir d'une ligne de résultat SQL
+    private function hydrate(array $ligne): TacheQuotidienne {
+        return new TacheQuotidienne(
             $ligne['titre'],
-            $ligne['criticite'],
+            $ligne['priorite'],
+            $ligne['statut'],
+            $ligne['date'],
+            $ligne['responsable'],
             $ligne['societe'],
-            $ligne['cycle'],
-            $ligne['auditeur'],
-            $ligne['description'],
-            $ligne['causes'],
-            $ligne['consequences'],
-            $this->decodeArrayField($ligne['recommandations']) ?? [],
-            $this->decodeArrayField($ligne['actions']) ?? [],
-            $this->decodeArrayField($ligne['preuves']) ?? [],
-            $ligne['created_at'],
-            $ligne['updated_at'],
+            $ligne['avancement'],
+            $ligne['duree_heures'],
+            $ligne['notes'],
+            (bool) $ligne['permanent'],
+            $ligne['recurrenceType'],
+            $this->decodeArrayField($ligne['recurrenceDow']) ?? [],
+            $this->decodeArrayField($ligne['recurrenceDom']) ?? [],
+            $this->decodeArrayField($ligne['fiches_completion']) ?? [],
             $ligne['id']
         );
     }
 
     // Construit le tableau de paramètres pour les requêtes préparées
-    private function toParams(Frap $frap): array {
+    private function toParams(TacheQuotidienne $tache_quotidienne): array {
         return [
-            'numero'          => $frap->numero,
-            'ref'             => $frap->ref,
-            'audit_refs'      => json_encode($frap->audit_refs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            'taf_ref'         => json_encode($frap->taf_ref, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            'titre'           => $frap->titre,
-            'criticite'       => $frap->criticite,
-            'societe'         => $frap->societe,
-            'cycle'           => $frap->cycle,
-            'auditeur'        => $frap->auditeur,
-            'description'     => $frap->description,
-            'causes'          => $frap->causes,
-            'consequences'    => $frap->consequences,
-            'recommandations' => json_encode($frap->recommandations, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            'actions'         => json_encode($frap->actions, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            'preuves'         => json_encode($frap->preuves, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            'created_at'      => $frap->created_at,
-            'updated_at'      => $frap->updated_at
+            'titre'             => $tache_quotidienne->titre,
+            'priorite'          => $tache_quotidienne->priorite,
+            'statut'            => $tache_quotidienne->statut,
+            'date'              => $tache_quotidienne->date,
+            'responsable'       => $tache_quotidienne->responsable,
+            'societe'           => $tache_quotidienne->societe,
+            'avancement'        => $tache_quotidienne->avancement,
+            'duree_heures'      => $tache_quotidienne->duree_heures,
+            'notes'             => $tache_quotidienne->notes,
+            'permanent'         => $tache_quotidienne->permanent ? 1 : 0,
+            'recurrenceType'    => json_encode($tache_quotidienne->recurrenceType, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'recurrenceDow'     => json_encode($tache_quotidienne->recurrenceDow, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'recurrenceDom'     => json_encode($tache_quotidienne->recurrenceDom, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            'fiches_completion' => json_encode($tache_quotidienne->fiches_completion, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
         ];
+    }
+
+    private function toParams1(Tache_rapide $tache): array {
+        return [
+            'avancement'                 => $tache->avancement,
+            'id'                 => $tache->id
+            ];
     }
 }
