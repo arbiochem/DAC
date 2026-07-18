@@ -9222,7 +9222,7 @@ $(document).on('click','#gm-iia-v-btn',function(){
   const st4=sub(s4,e4,3), st5=sub(s5,e5,3), st6=sub(s6,e6,3);
   const st7=sub(s7,e7,3), st8=sub(s8,e8,3);
 
-  gmTasks = [
+   gmTasks = [
     // ── PHASE 1 : PLANIFICATION (Normes 11.1 à 11.3) — 7 J.O. ──
     {
       id:uid(), type:'task',
@@ -13311,7 +13311,7 @@ function openUnifiedModal(defaultTab, editContext){
       const auditRef = $('#gm-audit-ref').val()||'';
       const progress = 0;
       const status   = $('#gm-status').val()||'planned';
-      gmTasks=[];
+      gmRebuildTaskList();
       const data = {
         action: 'ajouter',
         ref: auditRef||undefined,
@@ -15359,39 +15359,57 @@ function renderOM(){
         const stIco={planned:'📋',inprogress:'🔄',done:'✅'};
 
         filtered.forEach((o,i)=>{
-          const idx=ORDRES_MISSION.indexOf(o);
-          const sc=stCfg[o.statut]||stCfg.planned;
-          const team=(o.equipe||[]).map(m=>`<span style="font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:8px;margin:1px;">${m.nom}</span>`).join('');
-          $grid.append(`
-          <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.06);transition:box-shadow .15s;"
-              onmouseover="this.style.boxShadow=\'0 4px 14px rgba(0,0,0,.12)\'"
-              onmouseout="this.style.boxShadow=\'0 1px 4px rgba(0,0,0,.06)\'">
-            <div style="background:linear-gradient(135deg,#0070f2,#1a4fa0);padding:10px 14px;display:flex;justify-content:space-between;align-items:flex-start;">
-              <div>
-                <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.75);margin-bottom:2px;">${o.ref||'—'}</div>
-                <div style="font-size:12px;font-weight:700;color:#fff;line-height:1.3;">${o.objet||'Mission d\'audit'}</div>
-              </div>
-              <span style="font-size:8px;" class="om-badge ${sc.cls}">${stIco[o.statut]||'📋'} ${sc.label}</span>
-            </div>
-            <div style="padding:10px 14px;font-size:11px;">
-              <div style="display:flex;gap:14px;margin-bottom:7px;flex-wrap:wrap;">
-                <span style="color:var(--text-muted);">🏢 <strong>${o.societe||'—'}</strong></span>
-                <span style="color:var(--text-muted);">👤 ${o.chefMission||'—'}</span>
-              </div>
-              <div style="display:flex;gap:12px;margin-bottom:8px;font-size:10px;color:var(--text-muted);">
-                <span>📅 Du <strong>${o.dateDebut||'—'}</strong> au <strong>${o.dateFin||'—'}</strong></span>
-                <span style="margin-left:auto;">🗓️ Émis le ${o.dateEmission||'—'}</span>
-              </div>
-              <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">${team||'<span style="font-size:10px;color:var(--text-dim);">Aucun membre</span>'}</div>
-              <div style="display:flex;gap:6px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:8px;margin-top:2px;">
-                <button class="btn om-view-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;">👁 Aperçu</button>
-                <button class="btn om-edit-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;">✏️ Modifier</button>
-                <button class="btn om-print-one-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;background:var(--accent);color:#fff;border-color:var(--accent);">🖨️ Imprimer</button>
-                <button class="btn om-del-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;color:var(--red);border-color:var(--red-bg);">✕</button>
-              </div>
-            </div>
-          </div>`);
+          $.ajax({
+            url: "/DAC/php/ordre_mission/actions.php",
+              type: "POST",
+              dataType: "json",
+              data: {
+                  action: "lister"
+              },
+
+              success: function(response) {
+                ORDRES_MISSION=response.data;
+                const idx=ORDRES_MISSION.indexOf(o);
+                const sc=stCfg[o.statut]||stCfg.planned;
+                const team=(o.equipe||[]).map(m=>`<span style="font-size:10px;background:var(--surface3);padding:1px 6px;border-radius:8px;margin:1px;">${m.nom}</span>`).join('');
+                $grid.append(`
+                <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.06);transition:box-shadow .15s;"
+                    onmouseover="this.style.boxShadow=\'0 4px 14px rgba(0,0,0,.12)\'"
+                    onmouseout="this.style.boxShadow=\'0 1px 4px rgba(0,0,0,.06)\'">
+                  <div style="background:linear-gradient(135deg,#0070f2,#1a4fa0);padding:10px 14px;display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div>
+                      <div style="font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.75);margin-bottom:2px;">${o.ref||'—'}</div>
+                      <div style="font-size:12px;font-weight:700;color:#fff;line-height:1.3;">${o.objet||'Mission d\'audit'}</div>
+                    </div>
+                    <span style="font-size:8px;" class="om-badge ${sc.cls}">${stIco[o.statut]||'📋'} ${sc.label}</span>
+                  </div>
+                  <div style="padding:10px 14px;font-size:11px;">
+                    <div style="display:flex;gap:14px;margin-bottom:7px;flex-wrap:wrap;">
+                      <span style="color:var(--text-muted);">🏢 <strong>${o.societe||'—'}</strong></span>
+                      <span style="color:var(--text-muted);">👤 ${o.chefMission||'—'}</span>
+                    </div>
+                    <div style="display:flex;gap:12px;margin-bottom:8px;font-size:10px;color:var(--text-muted);">
+                      <span>📅 Du <strong>${o.dateDebut||'—'}</strong> au <strong>${o.dateFin||'—'}</strong></span>
+                      <span style="margin-left:auto;">🗓️ Émis le ${o.dateEmission||'—'}</span>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px;">${team||'<span style="font-size:10px;color:var(--text-dim);">Aucun membre</span>'}</div>
+                    <div style="display:flex;gap:6px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:8px;margin-top:2px;">
+                      <button class="btn om-view-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;">👁 Aperçu</button>
+                      <button class="btn om-edit-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;">✏️ Modifier</button>
+                      <button class="btn om-print-one-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;background:var(--accent);color:#fff;border-color:var(--accent);">🖨️ Imprimer</button>
+                      <button class="btn om-del-btn" data-idx="${idx}" style="font-size:10px;padding:2px 10px;color:var(--red);border-color:var(--red-bg);">✕</button>
+                    </div>
+                  </div>
+                </div>`);
+              },
+
+              error: function(xhr) {
+                  console.log("Erreur AJAX :", xhr.responseText);
+              }
+          });
+          
         });
+        gmRebuildTaskList();
       },
 
       error: function(xhr) {
@@ -15941,12 +15959,12 @@ function readCustomFields(){
 }
 
 function saveOM(idx){
-  tody
   const ref=$('#om-ref').val().trim();
   const societe=$('#om-societe').val();
   const objet=$('#om-objet').val().trim();
   if(!ref||!societe||!objet){toast('error','!','Référence, Société et Objet sont obligatoires.');return;}
-  const obj={
+  const data={
+    action:'ajouter',
     id: idx>=0?ORDRES_MISSION[idx].id:('OM-'+(Date.now()%1000000)),
     ref, societe, objet,
     dateEmission:$('#om-date-emission').val(),
@@ -16015,14 +16033,40 @@ function saveOM(idx){
     customSign2Nom:$('#custom-sign2-nom').val().trim(),
     createdAt: idx>=0?ORDRES_MISSION[idx].createdAt:new Date().toISOString().slice(0,10)
   };
-  if(idx>=0) ORDRES_MISSION[idx]=obj;
-  else ORDRES_MISSION.unshift(obj);
-  $(document).off('click.omaddmembre click.omdelmembre click.omtab click.ctrladdpoint click.ctrldelpoint click.customaddtext click.customaddtextarea click.customaddselect click.customadddate click.customaddcheck click.customdelfield input.customopts');
-  $('.modal').css('width','');
-  closeModal();
-  dbSaveOM();
-  renderOM();
-  toast('success','📄',idx>=0?'Ordre de Mission mis à jour':'Ordre de Mission créé — '+ref);
+
+  const a=ORDRES_MISSION.splice(idx,1);   
+
+  let ids = a.map(item => item.id);
+
+  if(ids>=0) {
+    ORDRES_MISSION[idx]=data;
+  }else{
+    ORDRES_MISSION.unshift(data);
+    $.ajax({
+      url: "/DAC/php/ordre_mission/actions.php",
+      type: "POST",
+      data: data,
+      dataType: "json",
+
+      success: function(response){
+        $(document).off('click.omaddmembre click.omdelmembre click.omtab click.ctrladdpoint click.ctrldelpoint click.customaddtext click.customaddtextarea click.customaddselect click.customadddate click.customaddcheck click.customdelfield input.customopts');
+        $('.modal').css('width','');
+        closeModal();
+        renderOM();
+        toast('success','📄',idx>=0?'Ordre de Mission mis à jour':'Ordre de Mission créé — '+ref);
+      },
+
+      error:function(xhr,status,error){
+
+          console.log("Status :",status);
+          console.log("Erreur :",error);
+          console.log("Réponse :",xhr.responseText);
+
+          alert("Erreur serveur : "+xhr.status);
+
+      }
+    });
+  }
 }
 
 function buildOMDoc(o){
@@ -16361,10 +16405,46 @@ $(document).on('click','.om-view-btn',function(){ previewOM(ORDRES_MISSION[+$(th
 $(document).on('click','.om-print-one-btn',function(){ printOM(ORDRES_MISSION[+$(this).data('idx')]); });
 $(document).on('click','.om-del-btn',function(){
   const idx=+$(this).data('idx');
-  if(!confirm(`Supprimer l'OM "${ORDRES_MISSION[idx]?.ref}" ?`)) return;
-  ORDRES_MISSION.splice(idx,1);
-  dbSaveOM(); renderOM();
-  toast('success','🗑','Ordre de Mission supprimé');
+  const a=ORDRES_MISSION.splice(idx,1);   
+  dbSaveOM()
+  let ids = a.map(item => item.id);
+  let ref = a.map(item => item.ref);
+
+  if(!confirm(`Supprimer l'OM "${ref}" ?`)) return;
+    const dataDelete = {
+        action: 'supprimer',
+        id: ids
+    };
+  
+    $.ajax({
+      url: "/DAC/php/ordre_mission/actions.php",
+      type: "POST",
+      data: dataDelete,
+      dataType: "json",
+
+      success: function(response){
+          console.log(response);
+          if(response.success){  
+            ORDRES_MISSION.splice(idx,1);
+            renderOM();
+            toast('success','🗑','Ordre de Mission supprimé');
+          }else{
+
+              toast('error','Erreur',response.message);
+          }
+      },
+
+      error:function(xhr,status,error){
+
+          console.log("Status :",status);
+          console.log("Erreur :",error);
+          console.log("Réponse :",xhr.responseText);
+
+          alert("Erreur serveur : "+xhr.status);
+      }
+  });
+
+  
 });
 
 $(document).on('input','#om-search,#om-filter-soc',renderOM);
